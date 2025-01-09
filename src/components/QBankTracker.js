@@ -1,9 +1,10 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Crown, Target } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 const QBankTracker = () => {
     const [stats, setStats] = useState({
         user1: { completed: 0, correct: 0, name: "bholipunjaban69" },
@@ -21,6 +22,80 @@ const QBankTracker = () => {
         user1: '',
         user2: ''
     });
+    const [syncStatus, setSyncStatus] = useState({
+        isOnline: true,
+        isSyncing: false,
+        lastSynced: null,
+        error: '',
+    });
+    const mergeData = (localData, serverData) => {
+        return {
+            user1: {
+                completed: localData.user1.completed + serverData.user1.completed,
+                correct: localData.user1.correct + serverData.user1.correct,
+                name: localData.user1.name,
+            },
+            user2: {
+                completed: localData.user2.completed + serverData.user2.completed,
+                correct: localData.user2.correct + serverData.user2.correct,
+                name: localData.user2.name,
+            }
+        };
+    };
+    const syncData = async () => {
+        if (!syncStatus.isOnline || syncStatus.isSyncing)
+            return;
+        setSyncStatus(prev => ({ ...prev, isSyncing: true }));
+        try {
+            const { data: serverData, error: fetchError } = await supabase
+                .from('qbank_stats')
+                .select('*')
+                .single();
+            if (fetchError && fetchError.code !== 'PGRST116') {
+                throw fetchError;
+            }
+            const dataToUpdate = serverData
+                ? mergeData(stats, serverData.stats)
+                : stats;
+            const { error: upsertError } = await supabase
+                .from('qbank_stats')
+                .upsert({
+                id: 'main',
+                stats: dataToUpdate,
+                last_updated: new Date().toISOString()
+            });
+            if (upsertError)
+                throw upsertError;
+            setStats(dataToUpdate);
+            setSyncStatus(prev => ({
+                ...prev,
+                lastSynced: Date.now(),
+                isSyncing: false,
+            }));
+        }
+        catch (error) {
+            console.error('Sync failed:', error);
+            setSyncStatus(prev => ({
+                ...prev,
+                isSyncing: false,
+                error: 'Sync failed. Will retry later.'
+            }));
+        }
+    };
+    useEffect(() => {
+        const subscription = supabase
+            .channel('qbank_stats_changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'qbank_stats' }, (payload) => {
+            const serverData = payload.new.stats;
+            if (serverData) {
+                setStats(prev => mergeData(prev, serverData));
+            }
+        })
+            .subscribe();
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, []);
     const handleSubmit = (user) => {
         const newCompleted = parseInt(inputs[user].completed) || 0;
         const newCorrect = parseInt(inputs[user].correct) || 0;
