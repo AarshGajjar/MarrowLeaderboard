@@ -11,22 +11,26 @@ interface UserStats {
   name: string;
 }
 
+type UserKey = 'user1' | 'user2';
+
+interface StatsType {
+  user1: UserStats;
+  user2: UserStats;
+}
+
 interface Inputs {
   completed: string;
   correct: string;
 }
-
-type UserKey = 'user1' | 'user2';
 
 const calculateAccuracy = (correct: number, total: number): string => {
   if (total === 0) return '0';
   return ((correct / total) * 100).toFixed(1);
 };
 
+
 const calculateMetrics = (stats: UserStats) => {
   const accuracy = parseFloat(calculateAccuracy(stats.correct, stats.completed));
-  // Calculate points: weight both accuracy and volume
-  // 1 point per question completed, bonus points for accuracy above threshold
   const accuracyThreshold = 80;
   const accuracyBonus = accuracy >= accuracyThreshold ? (accuracy - accuracyThreshold) * 2 : 0;
   const points = stats.completed + (accuracyBonus * stats.completed / 100);
@@ -39,39 +43,62 @@ const calculateMetrics = (stats: UserStats) => {
   };
 };
 
+interface Comparison {
+  diff: number;
+  leader: UserKey;
+  metric: string;
+  value: string;
+}
+
+interface ComparisonResult {
+  overallLeader: UserKey;
+  comparisons: {
+    accuracy: Comparison;
+    volume: Comparison;
+    points: Comparison;
+    effectiveScore: Comparison;
+  };
+  user1Metrics: ReturnType<typeof calculateMetrics>;
+  user2Metrics: ReturnType<typeof calculateMetrics>;
+}
+
+
 const determineLeader = (
   user1Metrics: ReturnType<typeof calculateMetrics>,
   user2Metrics: ReturnType<typeof calculateMetrics>
-) => {
+): ComparisonResult => {
+  const compareAndGetLeader = (value1: number, value2: number): UserKey => {
+    return value1 >= value2 ? 'user1' : 'user2';
+  };
+
   const comparisons = {
     accuracy: {
       diff: user1Metrics.accuracy - user2Metrics.accuracy,
-      leader: user1Metrics.accuracy >= user2Metrics.accuracy ? 'user1' : 'user2',
+      leader: compareAndGetLeader(user1Metrics.accuracy, user2Metrics.accuracy),
       metric: 'accuracy',
       value: Math.abs(user1Metrics.accuracy - user2Metrics.accuracy).toFixed(1) + '%'
     },
     volume: {
       diff: user1Metrics.questionsPerDay - user2Metrics.questionsPerDay,
-      leader: user1Metrics.questionsPerDay >= user2Metrics.questionsPerDay ? 'user1' : 'user2',
+      leader: compareAndGetLeader(user1Metrics.questionsPerDay, user2Metrics.questionsPerDay),
       metric: 'questions',
       value: Math.abs(user1Metrics.questionsPerDay - user2Metrics.questionsPerDay).toString()
     },
     points: {
       diff: user1Metrics.points - user2Metrics.points,
-      leader: user1Metrics.points >= user2Metrics.points ? 'user1' : 'user2',
+      leader: compareAndGetLeader(user1Metrics.points, user2Metrics.points),
       metric: 'points',
       value: Math.abs(user1Metrics.points - user2Metrics.points).toString()
     },
     effectiveScore: {
       diff: user1Metrics.effectiveScore - user2Metrics.effectiveScore,
-      leader: user1Metrics.effectiveScore >= user2Metrics.effectiveScore ? 'user1' : 'user2',
+      leader: compareAndGetLeader(user1Metrics.effectiveScore, user2Metrics.effectiveScore),
       metric: 'correct answers',
       value: Math.abs(user1Metrics.effectiveScore - user2Metrics.effectiveScore).toString()
     }
-  };
+  } as const;
 
-  // Determine overall leader based on points
-  const overallLeader = comparisons.points.leader;
+  const overallLeader: UserKey = compareAndGetLeader(user1Metrics.points, user2Metrics.points);
   
   return {
     overallLeader,
@@ -81,7 +108,7 @@ const determineLeader = (
   };
 };
 
-const StatsComparison = ({ stats }: { stats: { user1: UserStats; user2: UserStats } }) => {
+const StatsComparison = ({ stats }: { stats: StatsType }) => {
   const user1Metrics = calculateMetrics(stats.user1);
   const user2Metrics = calculateMetrics(stats.user2);
   const comparison = determineLeader(user1Metrics, user2Metrics);
@@ -140,6 +167,7 @@ const StatsComparison = ({ stats }: { stats: { user1: UserStats; user2: UserStat
     </div>
   );
 };
+
 
 const QBankTracker = () => {
   const [stats, setStats] = useState<{ user1: UserStats; user2: UserStats }>({
