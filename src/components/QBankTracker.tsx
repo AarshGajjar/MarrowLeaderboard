@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Crown, Target, Edit2, Plus } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import DailyProgressGraph from './DailyProgressGraph';
 
 interface UserStats {
   completed: number;
@@ -21,6 +22,14 @@ interface StatsType {
 interface Inputs {
   completed: string;
   correct: string;
+}
+
+interface DailyProgress {
+  date: string;
+  user1Completed: number;
+  user1Correct: number;
+  user2Completed: number;
+  user2Correct: number;
 }
 
 const calculateAccuracy = (correct: number, total: number): string => {
@@ -171,9 +180,11 @@ const StatsComparison = ({ stats }: { stats: StatsType }) => {
 
 const QBankTracker = () => {
   const [stats, setStats] = useState<{ user1: UserStats; user2: UserStats }>({
-    user1: { completed: 0, correct: 0, name: "bholipunjaban69" },
-    user2: { completed: 0, correct: 0, name: "gorlin" },
+    user1: { completed: 0, correct: 0, name: "Aarsh" },
+    user2: { completed: 0, correct: 0, name: "Aman" },
   });
+
+  const [dailyProgress, setDailyProgress] = useState<DailyProgress[]>([]);  
 
   const [inputs, setInputs] = useState<{ user1: Inputs; user2: Inputs }>({
     user1: { completed: '', correct: '' },
@@ -192,6 +203,7 @@ const QBankTracker = () => {
 
   useEffect(() => {
     fetchData();
+    fetchDailyProgress();
   }, []);
 
   const fetchData = async () => {
@@ -211,6 +223,123 @@ const QBankTracker = () => {
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);
+    }
+  };
+
+
+  const fetchDailyProgress = async () => {
+    try {
+      console.log('Fetching daily progress...'); // Debug log
+      const { data: tableData, error: tableError } = await supabase
+        .from('daily_progress')
+        .select('*')
+        .limit(1);
+
+      if (tableError) {
+        console.error('Error accessing daily_progress table:', tableError);
+        return;
+      }
+
+      const { data, error: fetchError } = await supabase
+      .from('daily_progress')
+      .select('date, user1_completed, user1_correct, user2_completed, user2_correct')
+      .order('date', { ascending: true });
+ 
+      if (fetchError) {
+        console.error('Supabase error:', fetchError); // Detailed error logging
+        return;
+      }
+
+      console.log('Raw daily progress data:', data); // Debug log
+
+      if (!data || data.length === 0) {
+        console.log('No daily progress data found in the table');
+        return;
+      }
+        
+      // Transform the snake_case data to camelCase for the component
+      const transformedData = data.map(entry => ({
+        date: entry.date,
+        user1Completed: entry.user1_completed,
+        user1Correct: entry.user1_correct,
+        user2Completed: entry.user2_completed,
+        user2Correct: entry.user2_correct
+      }));
+
+        console.log('Transformed daily progress data:', transformedData); // Debug log
+        setDailyProgress(transformedData);
+      } catch (error) {
+      console.error('Failed to fetch daily progress:', error);
+    }
+  };
+
+  const updateDailyProgress = async (user: UserKey, completed: number, correct: number) => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    
+    try {
+      console.log('Updating daily progress for:', { user, completed, correct, today }); // Debug log
+      
+      // First, try to get today's entry
+      const { data: existingData, error: fetchError } = await supabase
+        .from('daily_progress')
+        .select('*')
+        .eq('date', today)
+        .maybeSingle();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error fetching existing entry:', fetchError);
+        throw fetchError;
+      }
+
+      const userCompletedField = `${user}_completed`;
+      const userCorrectField = `${user}_correct`;
+
+      if (existingData) {
+        console.log('Existing entry found:', existingData); // Debug log
+        
+        // Update existing entry using snake_case column names
+        const updateData = {
+          [userCompletedField]: (existingData[userCompletedField] || 0) + completed,
+          [userCorrectField]: (existingData[userCorrectField] || 0) + correct
+        };
+
+        const { error: updateError } = await supabase
+          .from('daily_progress')
+          .update(updateData)
+          .eq('date', today);
+
+        if (updateError) {
+          console.error('Error updating entry:', updateError);
+          throw updateError;
+        }
+      } else {
+        console.log('Creating new entry for today'); // Debug log
+        
+        // Create new entry using snake_case column names
+        const newEntry = {
+          date: today,
+          user1_completed: user === 'user1' ? completed : 0,
+          user1_correct: user === 'user1' ? correct : 0,
+          user2_completed: user === 'user2' ? completed : 0,
+          user2_correct: user === 'user2' ? correct : 0
+        };
+
+        const { error: insertError } = await supabase
+          .from('daily_progress')
+          .insert(newEntry);
+
+        if (insertError) {
+          console.error('Error inserting new entry:', insertError);
+          throw insertError;
+        }
+      }
+
+      // Fetch updated data
+      await fetchDailyProgress();
+      
+    } catch (error) {
+      console.error('Error in updateDailyProgress:', error);
     }
   };
 
@@ -258,17 +387,22 @@ const QBankTracker = () => {
       return;
     }
 
-    const updatedStats = {
-      ...stats,
-      [user]: {
-        ...stats[user],
-        completed: mode[user] === 'edit' ? newCompleted : stats[user].completed + newCompleted,
-        correct: mode[user] === 'edit' ? newCorrect : stats[user].correct + newCorrect,
-      },
-    };
-
     try {
-      const { error: upsertError } = await supabase
+      console.log('Starting handleSubmit for:', user); // Debug log
+
+      // First update the total stats
+      const updatedStats = {
+        ...stats,
+        [user]: {
+          ...stats[user],
+          completed: mode[user] === 'edit' ? newCompleted : stats[user].completed + newCompleted,
+          correct: mode[user] === 'edit' ? newCorrect : stats[user].correct + newCorrect,
+        },
+      };
+
+      console.log('Updating stats with:', updatedStats); // Debug log
+
+      const { error: statsError } = await supabase
         .from('qbank_stats')
         .upsert({
           id: 'main',
@@ -276,7 +410,19 @@ const QBankTracker = () => {
           last_updated: new Date().toISOString(),
         });
 
-      if (upsertError) throw upsertError;
+      if (statsError) throw statsError;
+
+      console.log('Stats updated successfully, mode is:', mode[user]);
+
+      // Only update daily progress when adding new progress, not when editing
+      if (mode[user] === 'add') {
+        console.log('Calling updateDailyProgress with:', {
+          user,
+          newCompleted,
+          newCorrect
+        });
+        await updateDailyProgress(user, newCompleted, newCorrect);
+      }
 
       setStats(updatedStats);
       setInputs(prev => ({
@@ -287,8 +433,9 @@ const QBankTracker = () => {
         ...prev,
         [user]: 'view',
       }));
+
     } catch (error) {
-      console.error('Failed to update stats:', error);
+      console.error('Failed to update data:', error);
     }
   };
 
@@ -388,6 +535,14 @@ const QBankTracker = () => {
             )}
           </div>
         ))}
+
+        {dailyProgress.length > 0 && (
+          <DailyProgressGraph 
+            dailyData={dailyProgress}
+            user1Name={stats.user1.name}
+            user2Name={stats.user2.name}
+          />
+        )}
       </CardContent>
     </Card>
   );

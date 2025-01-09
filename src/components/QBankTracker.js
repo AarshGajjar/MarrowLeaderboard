@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Crown, Target, Edit2, Plus } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import DailyProgressGraph from './DailyProgressGraph';
 const calculateAccuracy = (correct, total) => {
     if (total === 0)
         return '0';
@@ -68,9 +69,10 @@ const StatsComparison = ({ stats }) => {
 };
 const QBankTracker = () => {
     const [stats, setStats] = useState({
-        user1: { completed: 0, correct: 0, name: "bholipunjaban69" },
-        user2: { completed: 0, correct: 0, name: "gorlin" },
+        user1: { completed: 0, correct: 0, name: "Aarsh" },
+        user2: { completed: 0, correct: 0, name: "Aman" },
     });
+    const [dailyProgress, setDailyProgress] = useState([]);
     const [inputs, setInputs] = useState({
         user1: { completed: '', correct: '' },
         user2: { completed: '', correct: '' },
@@ -85,6 +87,7 @@ const QBankTracker = () => {
     });
     useEffect(() => {
         fetchData();
+        fetchDailyProgress();
     }, []);
     const fetchData = async () => {
         try {
@@ -102,6 +105,102 @@ const QBankTracker = () => {
         }
         catch (error) {
             console.error('Failed to fetch data:', error);
+        }
+    };
+    const fetchDailyProgress = async () => {
+        try {
+            console.log('Fetching daily progress...'); // Debug log
+            const { data: tableData, error: tableError } = await supabase
+                .from('daily_progress')
+                .select('*')
+                .limit(1);
+            if (tableError) {
+                console.error('Error accessing daily_progress table:', tableError);
+                return;
+            }
+            const { data, error: fetchError } = await supabase
+                .from('daily_progress')
+                .select('date, user1_completed, user1_correct, user2_completed, user2_correct')
+                .order('date', { ascending: true });
+            if (fetchError) {
+                console.error('Supabase error:', fetchError); // Detailed error logging
+                return;
+            }
+            console.log('Raw daily progress data:', data); // Debug log
+            if (!data || data.length === 0) {
+                console.log('No daily progress data found in the table');
+                return;
+            }
+            // Transform the snake_case data to camelCase for the component
+            const transformedData = data.map(entry => ({
+                date: entry.date,
+                user1Completed: entry.user1_completed,
+                user1Correct: entry.user1_correct,
+                user2Completed: entry.user2_completed,
+                user2Correct: entry.user2_correct
+            }));
+            console.log('Transformed daily progress data:', transformedData); // Debug log
+            setDailyProgress(transformedData);
+        }
+        catch (error) {
+            console.error('Failed to fetch daily progress:', error);
+        }
+    };
+    const updateDailyProgress = async (user, completed, correct) => {
+        const today = new Date().toISOString().split('T')[0];
+        try {
+            console.log('Updating daily progress for:', { user, completed, correct, today }); // Debug log
+            // First, try to get today's entry
+            const { data: existingData, error: fetchError } = await supabase
+                .from('daily_progress')
+                .select('*')
+                .eq('date', today)
+                .maybeSingle();
+            if (fetchError && fetchError.code !== 'PGRST116') {
+                console.error('Error fetching existing entry:', fetchError);
+                throw fetchError;
+            }
+            const userCompletedField = `${user}_completed`;
+            const userCorrectField = `${user}_correct`;
+            if (existingData) {
+                console.log('Existing entry found:', existingData); // Debug log
+                // Update existing entry using snake_case column names
+                const updateData = {
+                    [userCompletedField]: (existingData[userCompletedField] || 0) + completed,
+                    [userCorrectField]: (existingData[userCorrectField] || 0) + correct
+                };
+                const { error: updateError } = await supabase
+                    .from('daily_progress')
+                    .update(updateData)
+                    .eq('date', today);
+                if (updateError) {
+                    console.error('Error updating entry:', updateError);
+                    throw updateError;
+                }
+            }
+            else {
+                console.log('Creating new entry for today'); // Debug log
+                // Create new entry using snake_case column names
+                const newEntry = {
+                    date: today,
+                    user1_completed: user === 'user1' ? completed : 0,
+                    user1_correct: user === 'user1' ? correct : 0,
+                    user2_completed: user === 'user2' ? completed : 0,
+                    user2_correct: user === 'user2' ? correct : 0
+                };
+                const { error: insertError } = await supabase
+                    .from('daily_progress')
+                    .insert(newEntry);
+                if (insertError) {
+                    console.error('Error inserting new entry:', insertError);
+                    throw insertError;
+                }
+            }
+            // Fetch updated data
+            await fetchDailyProgress();
+        }
+        catch (error) {
+            console.error('Error in updateDailyProgress:', error);
         }
     };
     const handleInputChange = (user, field, value) => {
@@ -139,24 +238,37 @@ const QBankTracker = () => {
             }));
             return;
         }
-        const updatedStats = {
-            ...stats,
-            [user]: {
-                ...stats[user],
-                completed: mode[user] === 'edit' ? newCompleted : stats[user].completed + newCompleted,
-                correct: mode[user] === 'edit' ? newCorrect : stats[user].correct + newCorrect,
-            },
-        };
         try {
-            const { error: upsertError } = await supabase
+            console.log('Starting handleSubmit for:', user); // Debug log
+            // First update the total stats
+            const updatedStats = {
+                ...stats,
+                [user]: {
+                    ...stats[user],
+                    completed: mode[user] === 'edit' ? newCompleted : stats[user].completed + newCompleted,
+                    correct: mode[user] === 'edit' ? newCorrect : stats[user].correct + newCorrect,
+                },
+            };
+            console.log('Updating stats with:', updatedStats); // Debug log
+            const { error: statsError } = await supabase
                 .from('qbank_stats')
                 .upsert({
                 id: 'main',
                 stats: updatedStats,
                 last_updated: new Date().toISOString(),
             });
-            if (upsertError)
-                throw upsertError;
+            if (statsError)
+                throw statsError;
+            console.log('Stats updated successfully, mode is:', mode[user]);
+            // Only update daily progress when adding new progress, not when editing
+            if (mode[user] === 'add') {
+                console.log('Calling updateDailyProgress with:', {
+                    user,
+                    newCompleted,
+                    newCorrect
+                });
+                await updateDailyProgress(user, newCompleted, newCorrect);
+            }
             setStats(updatedStats);
             setInputs(prev => ({
                 ...prev,
@@ -168,7 +280,7 @@ const QBankTracker = () => {
             }));
         }
         catch (error) {
-            console.error('Failed to update stats:', error);
+            console.error('Failed to update data:', error);
         }
     };
     return (_jsxs(Card, { className: "w-full max-w-xl bg-gradient-to-br from-slate-50 to-slate-100 shadow-lg", children: [_jsx(CardHeader, { className: "space-y-1", children: _jsx(CardTitle, { className: "text-2xl text-center font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent", children: "QBank Challenge" }) }), _jsxs(CardContent, { className: "space-y-6", children: [_jsx(StatsComparison, { stats: stats }), ['user1', 'user2'].map((user) => (_jsxs("div", { className: "space-y-3 p-4 rounded-lg bg-white shadow-sm", children: [_jsxs("div", { className: "flex justify-between items-center", children: [_jsxs("div", { className: "flex items-center gap-2", children: [_jsx(Target, { className: "text-blue-500", size: 20 }), _jsx("span", { className: "font-medium", children: stats[user].name })] }), _jsxs("div", { className: "flex gap-2", children: [_jsxs(Button, { variant: "ghost", size: "sm", onClick: () => setMode(prev => ({
@@ -192,6 +304,6 @@ const QBankTracker = () => {
                                                             },
                                                         }));
                                                     }
-                                                }, children: [_jsx(Edit2, { size: 16, className: "mr-1" }), "Edit Stats"] })] })] }), mode[user] !== 'view' && (_jsxs("div", { className: "space-y-2", children: [_jsx(Input, { type: "number", value: inputs[user].completed, onChange: (e) => handleInputChange(user, 'completed', e.target.value), placeholder: mode[user] === 'add' ? "Questions completed in this session" : "Total questions completed", className: "w-full" }), _jsx(Input, { type: "number", value: inputs[user].correct, onChange: (e) => handleInputChange(user, 'correct', e.target.value), placeholder: mode[user] === 'add' ? "Correct answers in this session" : "Total correct answers", className: "w-full" }), error[user] && (_jsx("div", { className: "text-red-500 text-sm", children: error[user] })), _jsx(Button, { onClick: () => handleSubmit(user), className: "w-full", children: mode[user] === 'add' ? 'Add Progress' : 'Update Stats' })] })), mode[user] === 'view' && (_jsxs("div", { className: "space-y-1", children: [_jsxs("div", { children: ["Total Questions: ", stats[user].completed] }), _jsxs("div", { children: ["Correct Answers: ", stats[user].correct] }), _jsxs("div", { className: "font-semibold text-lg", children: ["Accuracy: ", calculateAccuracy(stats[user].correct, stats[user].completed), "%"] })] }))] }, user)))] })] }));
+                                                }, children: [_jsx(Edit2, { size: 16, className: "mr-1" }), "Edit Stats"] })] })] }), mode[user] !== 'view' && (_jsxs("div", { className: "space-y-2", children: [_jsx(Input, { type: "number", value: inputs[user].completed, onChange: (e) => handleInputChange(user, 'completed', e.target.value), placeholder: mode[user] === 'add' ? "Questions completed in this session" : "Total questions completed", className: "w-full" }), _jsx(Input, { type: "number", value: inputs[user].correct, onChange: (e) => handleInputChange(user, 'correct', e.target.value), placeholder: mode[user] === 'add' ? "Correct answers in this session" : "Total correct answers", className: "w-full" }), error[user] && (_jsx("div", { className: "text-red-500 text-sm", children: error[user] })), _jsx(Button, { onClick: () => handleSubmit(user), className: "w-full", children: mode[user] === 'add' ? 'Add Progress' : 'Update Stats' })] })), mode[user] === 'view' && (_jsxs("div", { className: "space-y-1", children: [_jsxs("div", { children: ["Total Questions: ", stats[user].completed] }), _jsxs("div", { children: ["Correct Answers: ", stats[user].correct] }), _jsxs("div", { className: "font-semibold text-lg", children: ["Accuracy: ", calculateAccuracy(stats[user].correct, stats[user].completed), "%"] })] }))] }, user))), dailyProgress.length > 0 && (_jsx(DailyProgressGraph, { dailyData: dailyProgress, user1Name: stats.user1.name, user2Name: stats.user2.name }))] })] }));
 };
 export default QBankTracker;
