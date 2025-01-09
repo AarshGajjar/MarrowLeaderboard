@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Crown, Target, Cloud, CloudOff } from 'lucide-react';
+import { Crown, Target } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface UserStats {
@@ -55,9 +55,12 @@ const QBankTracker = () => {
     lastSynced: null,
     error: '',
   });
-  
 
-  const mergeData = (localData: { user1: UserStats; user2: UserStats }, serverData: { user1: UserStats; user2: UserStats }) => {
+  // Merge local data with server data
+  const mergeData = (
+    localData: { user1: UserStats; user2: UserStats },
+    serverData: { user1: UserStats; user2: UserStats }
+  ) => {
     return {
       user1: {
         completed: localData.user1.completed + serverData.user1.completed,
@@ -71,8 +74,8 @@ const QBankTracker = () => {
       }
     };
   };
-  
 
+  // Sync data with Supabase
   const syncData = async () => {
     if (!syncStatus.isOnline || syncStatus.isSyncing) return;
 
@@ -134,10 +137,11 @@ const QBankTracker = () => {
     };
   }, []);
 
+  // Handle the submit action
   const handleSubmit = (user: UserKey) => {
     const newCompleted = parseInt(inputs[user].completed) || 0;
     const newCorrect = parseInt(inputs[user].correct) || 0;
-    
+
     if (newCorrect > newCompleted) {
       setError(prev => ({
         ...prev,
@@ -145,7 +149,7 @@ const QBankTracker = () => {
       }));
       return;
     }
-    
+
     if (newCompleted < 0 || newCorrect < 0) {
       setError(prev => ({
         ...prev,
@@ -163,34 +167,37 @@ const QBankTracker = () => {
         correct: isEditing[user] ? newCorrect : prev[user].correct + newCorrect
       }
     }));
-    
+
     setInputs(prev => ({
       ...prev,
       [user]: { completed: '', correct: '' }
     }));
-    
+
     setIsEditing(prev => ({
       ...prev,
       [user]: false
     }));
   };
 
+  // Calculate accuracy
   const calculateAccuracy = (correct: number, completed: number): number => {
     return completed > 0 ? Math.round((correct / completed) * 100) : 0;
   };
 
+  // Get leader based on score
   const getLeader = (): UserKey => {
     const getScore = (user: UserKey): number => {
       const accuracy = calculateAccuracy(stats[user].correct, stats[user].completed);
       const completionPoints = Math.min(stats[user].completed / 100, 1); // Cap at 100 questions
       return (accuracy * 0.7) + (completionPoints * 30); // 70% weight to accuracy, 30% to completion (max 30 points)
     };
-    
+
     const user1Score = getScore('user1');
     const user2Score = getScore('user2');
     return user1Score >= user2Score ? "user1" : "user2";
   };
 
+  // Comparison header component
   const ComparisonHeader = () => {
     const leader = getLeader();
     return (
@@ -255,66 +262,57 @@ const QBankTracker = () => {
                     }));
                     setInputs(prev => ({
                       ...prev,
-                      [user]: isEditing[user] ? 
-                        { completed: '', correct: '' } : 
-                        { completed: data.completed.toString(), correct: data.correct.toString() }
+                      [user]: { completed: '', correct: '' }
                     }));
-                    setError(prev => ({ ...prev, [user]: '' }));
                   }}
                 >
-                  {isEditing[user] ? "Cancel" : "Edit"}
+                  {isEditing[user] ? 'Cancel' : 'Edit'}
                 </Button>
               </div>
-
-              <div className="space-y-1">
-                <div className="text-sm text-slate-600">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-lg">{accuracy}%</span>
-                    <span className="text-slate-400 text-xs">({data.correct}/{data.completed})</span>
-                  </div>
+              {isEditing[user] ? (
+                <div className="space-y-2">
+                  <Input
+                    type="number"
+                    value={inputs[user].completed}
+                    onChange={(e) => setInputs(prev => ({
+                      ...prev,
+                      [user]: { ...prev[user], completed: e.target.value }
+                    }))}
+                    placeholder="Completed"
+                  />
+                  <Input
+                    type="number"
+                    value={inputs[user].correct}
+                    onChange={(e) => setInputs(prev => ({
+                      ...prev,
+                      [user]: { ...prev[user], correct: e.target.value }
+                    }))}
+                    placeholder="Correct"
+                  />
+                  {error[user] && (
+                    <div className="text-red-500 text-sm">{error[user]}</div>
+                  )}
+                  <Button onClick={() => handleSubmit(user)}>Save</Button>
                 </div>
-              </div>
-
-              {error[user] && (
-                <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">
-                  {error[user]}
+              ) : (
+                <div className="space-y-1">
+                  <div>Total Questions: {data.completed}</div>
+                  <div>Correct Answers: {data.correct}</div>
+                  <div className="font-semibold text-lg">Accuracy: {accuracy}%</div>
                 </div>
               )}
-
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  type="number"
-                  placeholder={isEditing[user] ? "Total Questions" : "Questions Done"}
-                  value={inputs[user].completed}
-                  onChange={(e) => setInputs(prev => ({
-                    ...prev,
-                    [user]: { ...prev[user], completed: e.target.value }
-                  }))}
-                  min="0"
-                  className="bg-slate-50"
-                />
-                <Input
-                  type="number"
-                  placeholder={isEditing[user] ? "Total Correct" : "Correct Answers"}
-                  value={inputs[user].correct}
-                  onChange={(e) => setInputs(prev => ({
-                    ...prev,
-                    [user]: { ...prev[user], correct: e.target.value }
-                  }))}
-                  min="0"
-                  className="bg-slate-50"
-                />
-              </div>
-              
-              <Button 
-                onClick={() => handleSubmit(user)}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 transition-colors"
-              >
-                {isEditing[user] ? "Save Changes" : "Add Progress"}
-              </Button>
             </div>
           );
         })}
+        
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="w-full"
+          onClick={syncData}
+        >
+          Sync Data
+        </Button>
       </CardContent>
     </Card>
   );
