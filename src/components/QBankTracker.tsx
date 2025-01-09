@@ -121,10 +121,39 @@ const StatsComparison = ({ stats }: { stats: StatsType }) => {
   const user1Metrics = calculateMetrics(stats.user1);
   const user2Metrics = calculateMetrics(stats.user2);
   const comparison = determineLeader(user1Metrics, user2Metrics);
-  
+
+  // Remove redundant points difference in VS section
+  const displayComparions = Object.entries(comparison.comparisons)
+    .filter(([key]) => key !== 'points')
+    .map(([key, value]) => value);
+
+  const getComparisonBar = (leader: UserKey, value: number, metric: string) => {
+    const barWidth = `${Math.min(value * 2, 100)}%`; // Adjust scaling as needed
+    const barColor = metric === 'accuracy' ? 'bg-blue-500' : metric === 'questions' ? 'bg-purple-500' : 'bg-indigo-500';
+    return (
+      <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div
+          className={`h-full ${barColor}`}
+          style={{ width: barWidth }}
+        ></div>
+      </div>
+    );
+  };
+
+  const getComparisonClass = (leader: UserKey, metric: string) => {
+    const baseClasses = "flex items-center justify-center gap-2 rounded-full px-3 py-1";
+    if (metric === 'accuracy') {
+      return `${baseClasses} bg-blue-50 text-blue-700`;
+    }
+    if (metric === 'questions') {
+      return `${baseClasses} bg-purple-50 text-purple-700`;
+    }
+    return `${baseClasses} bg-indigo-50 text-indigo-700`;
+  };
+
   return (
     <div className="space-y-4 mb-6 p-4 bg-white rounded-lg shadow-sm">
-      <div className="grid grid-cols-3 gap-4 text-center">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
         <div className="space-y-2">
           <div className="font-medium text-lg">{stats.user1.name}</div>
           <div className="text-3xl font-bold text-blue-600">
@@ -137,12 +166,24 @@ const StatsComparison = ({ stats }: { stats: StatsType }) => {
             {user1Metrics.points} points
           </div>
         </div>
-        
-        <div className="flex flex-col items-center justify-center space-y-2">
-          <div className="text-xl font-semibold text-purple-600">VS</div>
-          {Object.entries(comparison.comparisons).map(([key, value]) => (
-            <div key={key} className="text-sm text-gray-600">
-              {value.value} {value.metric}
+
+        <div className="flex flex-col items-center justify-center space-y-3">
+          <div className="text-xl font-semibold text-purple-600 mb-2">VS</div>
+          {displayComparions.map((value) => (
+            <div
+              key={value.metric}
+              className={getComparisonClass(value.leader, value.metric)}
+            >
+              {value.leader === 'user1' && (
+                <span className="font-medium">{stats.user1.name}</span>
+              )}
+              <span className="text-sm whitespace-nowrap">
+                +{value.value} {value.metric}
+              </span>
+              {value.leader === 'user2' && (
+                <span className="font-medium">{stats.user2.name}</span>
+              )}
+              {getComparisonBar(value.leader, parseFloat(value.value), value.metric)}
             </div>
           ))}
         </div>
@@ -160,16 +201,16 @@ const StatsComparison = ({ stats }: { stats: StatsType }) => {
           </div>
         </div>
       </div>
-      
-      <div className="flex justify-center items-center space-x-2">
+
+      <div className="flex justify-center items-center space-x-2 bg-yellow-50 rounded-full px-4 py-2">
         <Crown size={16} className="text-yellow-500" />
-        <span className="text-sm font-medium text-yellow-600">
+        <span className="text-sm font-medium text-yellow-700">
           {stats[comparison.overallLeader].name} is leading with {
             comparison.comparisons.points.value
           } more points!
         </span>
       </div>
-      
+
       <div className="text-xs text-center text-gray-500 mt-2">
         Points = Questions Completed + Bonus for Accuracy above 80%
       </div>
@@ -451,15 +492,16 @@ const QBankTracker = () => {
         
         {(['user1', 'user2'] as UserKey[]).map((user) => (
           <div key={user} className="space-y-3 p-4 rounded-lg bg-white shadow-sm">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap gap-3">
               <div className="flex items-center gap-2">
                 <Target className="text-blue-500" size={20} />
                 <span className="font-medium">{stats[user].name}</span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap ml-auto gap-2 w-full sm:w-auto">
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="flex-1 sm:flex-initial"
                   onClick={() => setMode(prev => ({
                     ...prev,
                     [user]: mode[user] === 'add' ? 'view' : 'add'
@@ -471,6 +513,7 @@ const QBankTracker = () => {
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="flex-1 sm:flex-initial"
                   onClick={() => {
                     if (mode[user] === 'edit') {
                       setMode(prev => ({ ...prev, [user]: 'view' }));
