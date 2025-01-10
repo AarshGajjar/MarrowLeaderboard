@@ -103,7 +103,7 @@ const determineLeader = (
     effectiveScore: {
       diff: user1Metrics.effectiveScore - user2Metrics.effectiveScore,
       leader: compareAndGetLeader(user1Metrics.effectiveScore, user2Metrics.effectiveScore),
-      metric: 'correct answers',
+      metric: 'correct',
       value: Math.abs(user1Metrics.effectiveScore - user2Metrics.effectiveScore).toString()
     }
   } as const;
@@ -149,7 +149,10 @@ const StatsComparison = ({ stats }: { stats: StatsType }) => {
             {user1Metrics.accuracy}%
           </div>
           <div className="text-sm text-gray-600">
-            {stats.user1.completed} cards
+            {stats.user1.completed} questions
+          </div>
+          <div className="text-sm text-gray-600">
+            {stats.user2.correct} correct
           </div>
           <div className="text-sm font-medium text-purple-600">
             {user1Metrics.points} points
@@ -193,7 +196,10 @@ const StatsComparison = ({ stats }: { stats: StatsType }) => {
             {user2Metrics.accuracy}%
           </div>
           <div className="text-sm text-gray-600">
-            {stats.user2.completed} cards
+            {stats.user2.completed} questions
+          </div>
+          <div className="text-sm text-gray-600">
+            {stats.user2.correct} correct
           </div>
           <div className="text-sm font-medium text-purple-600">
             {user2Metrics.points} points
@@ -572,7 +578,7 @@ const QBankTracker = () => {
             {mode[user] === 'view' && (
               <div className="space-y-1">
                 <div>Total Questions: {stats[user].completed}</div>
-                <div>Correct Answers: {stats[user].correct}</div>
+                <div>Correct: {stats[user].correct}</div>
                 <div className="font-semibold text-lg">
                   Accuracy: {calculateAccuracy(stats[user].correct, stats[user].completed)}%
                 </div>
