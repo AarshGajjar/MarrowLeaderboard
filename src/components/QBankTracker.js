@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Crosshair, TrendingUp, Award, Crown, Target, Edit2, Plus } from 'lucide-react';
+import { Crosshair, TrendingUp, Award, Crown, Target, Edit2, Plus, Lock, XCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import DailyProgressGraph from './DailyProgressGraph';
 import imgSrc from '@/assets/marrow.png';
@@ -100,6 +100,60 @@ const QBankTracker = () => {
         user1: '',
         user2: '',
     });
+    // Password function
+    const [passwordInput, setPasswordInput] = useState({
+        user1: '',
+        user2: '',
+    });
+    const [showPasswordInput, setShowPasswordInput] = useState({
+        user1: false,
+        user2: false,
+    });
+    const [passwordError, setPasswordError] = useState({
+        user1: '',
+        user2: '',
+    });
+    // Password validation
+    const verifyPassword = (user, password) => {
+        const correctPasswords = {
+            user1: '9696',
+            user2: '6969'
+        };
+        if (password === correctPasswords[user]) {
+            setPasswordError(prev => ({ ...prev, [user]: '' }));
+            setShowPasswordInput(prev => ({ ...prev, [user]: false }));
+            return true;
+        }
+        setPasswordError(prev => ({ ...prev, [user]: 'Incorrect password' }));
+        return false;
+    };
+    // Modified function to handle mode changes with password verification
+    const handleModeChange = (user, newMode) => {
+        if (newMode === 'view') {
+            setMode(prev => ({ ...prev, [user]: 'view' }));
+            setShowPasswordInput(prev => ({ ...prev, [user]: false }));
+            setPasswordInput(prev => ({ ...prev, [user]: '' }));
+            setPasswordError(prev => ({ ...prev, [user]: '' }));
+            if (newMode === 'view' && mode[user] === 'edit') {
+                setInputs(prev => ({
+                    ...prev,
+                    [user]: { completed: '', correct: '' },
+                }));
+            }
+        }
+        else {
+            setShowPasswordInput(prev => ({ ...prev, [user]: true }));
+            if (newMode === 'edit') {
+                setInputs(prev => ({
+                    ...prev,
+                    [user]: {
+                        completed: stats[user].completed.toString(),
+                        correct: stats[user].correct.toString(),
+                    },
+                }));
+            }
+        }
+    };
     useEffect(() => {
         fetchData();
         fetchDailyProgress();
@@ -229,6 +283,9 @@ const QBankTracker = () => {
         setError(prev => ({ ...prev, [user]: '' }));
     };
     const handleSubmit = async (user) => {
+        if (!verifyPassword(user, passwordInput[user])) {
+            return;
+        }
         const newCompleted = parseInt(inputs[user].completed) || 0;
         const newCorrect = parseInt(inputs[user].correct) || 0;
         // Validation
@@ -298,27 +355,18 @@ const QBankTracker = () => {
             console.error('Failed to update data:', error);
         }
     };
-    return (_jsxs(Card, { className: "w-full max-w-xl bg-gradient-to-br from-slate-50 to-slate-100 shadow-lg", children: [_jsxs(CardHeader, { className: "space-y-1", children: [_jsx("div", { className: "flex justify-center", children: _jsx("img", { src: imgSrc, alt: "Marrow Logo", className: "w-12 h-12" }) }), _jsx(CardTitle, { className: "text-2xl text-center font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent", children: "Marrow QBank Challenge" })] }), _jsxs(CardContent, { className: "space-y-6", children: [_jsx(StatsComparison, { stats: stats }), ['user1', 'user2'].map((user) => (_jsxs("div", { className: "space-y-3 p-4 rounded-lg bg-white shadow-sm", children: [_jsxs("div", { className: "flex flex-wrap gap-3", children: [_jsxs("div", { className: "flex items-center gap-2", children: [_jsx(Target, { className: "text-blue-500", size: 20 }), _jsx("span", { className: "font-medium", children: stats[user].name })] }), _jsxs("div", { className: "flex flex-wrap ml-auto gap-2 w-full sm:w-auto", children: [_jsxs(Button, { variant: "ghost", size: "sm", className: "flex-1 sm:flex-initial", onClick: () => setMode(prev => ({
-                                                    ...prev,
-                                                    [user]: mode[user] === 'add' ? 'view' : 'add'
-                                                })), children: [_jsx(Plus, { size: 16, className: "mr-1" }), "Add Progress"] }), _jsxs(Button, { variant: "ghost", size: "sm", className: "flex-1 sm:flex-initial", onClick: () => {
-                                                    if (mode[user] === 'edit') {
-                                                        setMode(prev => ({ ...prev, [user]: 'view' }));
-                                                        setInputs(prev => ({
-                                                            ...prev,
-                                                            [user]: { completed: '', correct: '' },
-                                                        }));
-                                                    }
-                                                    else {
-                                                        setMode(prev => ({ ...prev, [user]: 'edit' }));
-                                                        setInputs(prev => ({
-                                                            ...prev,
-                                                            [user]: {
-                                                                completed: stats[user].completed.toString(),
-                                                                correct: stats[user].correct.toString(),
-                                                            },
-                                                        }));
-                                                    }
-                                                }, children: [_jsx(Edit2, { size: 16, className: "mr-1" }), "Edit Stats"] })] })] }), mode[user] !== 'view' && (_jsxs("div", { className: "space-y-2", children: [_jsx(Input, { type: "number", value: inputs[user].completed, onChange: (e) => handleInputChange(user, 'completed', e.target.value), placeholder: mode[user] === 'add' ? "Questions completed in this session" : "Total questions completed", className: "w-full" }), _jsx(Input, { type: "number", value: inputs[user].correct, onChange: (e) => handleInputChange(user, 'correct', e.target.value), placeholder: mode[user] === 'add' ? "Correct answers in this session" : "Total correct answers", className: "w-full" }), error[user] && (_jsx("div", { className: "text-red-500 text-sm", children: error[user] })), _jsx(Button, { onClick: () => handleSubmit(user), className: "w-full", children: mode[user] === 'add' ? 'Add Progress' : 'Update Stats' })] })), mode[user] === 'view' && (_jsxs("div", { className: "space-y-1", children: [_jsxs("div", { children: ["Total Questions: ", stats[user].completed] }), _jsxs("div", { children: ["Correct: ", stats[user].correct] }), _jsxs("div", { className: "font-semibold text-lg", children: ["Accuracy: ", calculateAccuracy(stats[user].correct, stats[user].completed), "%"] })] }))] }, user))), dailyProgress.length > 0 && (_jsx(DailyProgressGraph, { dailyData: dailyProgress, user1Name: stats.user1.name, user2Name: stats.user2.name }))] })] }));
+    return (_jsxs(Card, { className: "w-full max-w-xl bg-gradient-to-br from-slate-50 to-slate-100 shadow-lg", children: [_jsxs(CardHeader, { className: "space-y-1", children: [_jsx("div", { className: "flex justify-center", children: _jsx("img", { src: imgSrc, alt: "Marrow Logo", className: "w-12 h-12" }) }), _jsx(CardTitle, { className: "text-2xl text-center font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent", children: "Marrow QBank Challenge" })] }), _jsxs(CardContent, { className: "space-y-6", children: [_jsx(StatsComparison, { stats: stats }), ['user1', 'user2'].map((user) => (_jsxs("div", { className: "space-y-3 p-4 rounded-lg bg-white shadow-sm", children: [_jsxs("div", { className: "flex flex-wrap gap-3", children: [_jsxs("div", { className: "flex items-center gap-2", children: [_jsx(Target, { className: "text-blue-500", size: 20 }), _jsx("span", { className: "font-medium", children: stats[user].name })] }), _jsxs("div", { className: "flex flex-wrap ml-auto gap-2 w-full sm:w-auto", children: [_jsxs(Button, { variant: "ghost", size: "sm", className: "flex-1 sm:flex-initial", onClick: () => handleModeChange(user, mode[user] === 'add' ? 'view' : 'add'), children: [_jsx(Plus, { size: 16, className: "mr-1" }), "Add Progress"] }), _jsxs(Button, { variant: "ghost", size: "sm", className: "flex-1 sm:flex-initial", onClick: () => handleModeChange(user, mode[user] === 'add' ? 'view' : 'add'), children: [_jsx(Edit2, { size: 16, className: "mr-1" }), "Edit Stats"] })] })] }), showPasswordInput[user] && (_jsxs("div", { className: "space-y-2", children: [_jsxs("div", { className: "flex items-center gap-2", children: [_jsx(Lock, { size: 16, className: "text-gray-500" }), _jsx(Input, { type: "password", value: passwordInput[user], onChange: (e) => {
+                                                    setPasswordInput(prev => ({ ...prev, [user]: e.target.value }));
+                                                    setPasswordError(prev => ({ ...prev, [user]: '' }));
+                                                }, placeholder: "Enter password", className: "flex-1" }), _jsx(Button, { variant: "ghost", size: "sm", onClick: () => {
+                                                    setShowPasswordInput(prev => ({ ...prev, [user]: false }));
+                                                    setPasswordInput(prev => ({ ...prev, [user]: '' }));
+                                                    setPasswordError(prev => ({ ...prev, [user]: '' }));
+                                                    setMode(prev => ({ ...prev, [user]: 'view' }));
+                                                }, children: _jsx(XCircle, { size: 16 }) })] }), passwordError[user] && (_jsx("div", { className: "text-red-500 text-sm", children: passwordError[user] })), _jsx(Button, { onClick: () => {
+                                            if (verifyPassword(user, passwordInput[user])) {
+                                                setMode(prev => ({ ...prev, [user]: showPasswordInput[user] ? 'add' : 'edit' }));
+                                            }
+                                        }, className: "w-full", children: "Verify Password" })] })), mode[user] !== 'view' && !showPasswordInput[user] && (_jsxs("div", { className: "space-y-2", children: [_jsx(Input, { type: "number", value: inputs[user].completed, onChange: (e) => handleInputChange(user, 'completed', e.target.value), placeholder: mode[user] === 'add' ? "Questions completed in this session" : "Total questions completed", className: "w-full" }), _jsx(Input, { type: "number", value: inputs[user].correct, onChange: (e) => handleInputChange(user, 'correct', e.target.value), placeholder: mode[user] === 'add' ? "Correct answers in this session" : "Total correct answers", className: "w-full" }), error[user] && (_jsx("div", { className: "text-red-500 text-sm", children: error[user] })), _jsx(Button, { onClick: () => handleSubmit(user), className: "w-full", children: mode[user] === 'add' ? 'Add Progress' : 'Update Stats' })] })), mode[user] === 'view' && !showPasswordInput[user] && (_jsxs("div", { className: "space-y-1", children: [_jsxs("div", { children: ["Total Questions: ", stats[user].completed] }), _jsxs("div", { children: ["Correct: ", stats[user].correct] }), _jsxs("div", { className: "font-semibold text-lg", children: ["Accuracy: ", calculateAccuracy(stats[user].correct, stats[user].completed), "%"] })] }))] }, user))), dailyProgress.length > 0 && (_jsx(DailyProgressGraph, { dailyData: dailyProgress, user1Name: stats.user1.name, user2Name: stats.user2.name }))] })] }));
 };
 export default QBankTracker;

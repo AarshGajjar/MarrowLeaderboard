@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Crosshair,TrendingUp, Award, Crown, Target, Edit2, Plus } from 'lucide-react';
+import {  Crosshair, TrendingUp, Award, Crown, Target, Edit2, Plus, Lock, XCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import DailyProgressGraph from './DailyProgressGraph';
 import imgSrc from '@/assets/marrow.png';
@@ -247,6 +247,64 @@ const QBankTracker = () => {
     user2: '',
   });
 
+  // Password function
+  const [passwordInput, setPasswordInput] = useState<{ [key in UserKey]: string}>({
+    user1: '',
+    user2: '',
+  })
+  const [showPasswordInput, setShowPasswordInput] = useState<{ [key in UserKey]: boolean }>({
+    user1: false,
+    user2: false,
+  });
+  const [passwordError, setPasswordError] = useState<{ [key in UserKey]: string }>({
+    user1: '',
+    user2: '',
+  });
+
+  // Password validation
+  const verifyPassword = (user: UserKey, password: string) => {
+    const correctPasswords = {
+      user1: '9696', 
+      user2: '6969'  
+    };
+
+    if (password === correctPasswords[user]) {
+      setPasswordError(prev => ({ ...prev, [user]: '' }));
+      setShowPasswordInput(prev => ({ ...prev, [user]: false }));
+      return true;
+    }
+    
+    setPasswordError(prev => ({ ...prev, [user]: 'Incorrect password' }));
+    return false;
+  };
+
+  // Modified function to handle mode changes with password verification
+  const handleModeChange = (user: UserKey, newMode: 'view' | 'add' | 'edit') => {
+    if (newMode === 'view') {
+      setMode(prev => ({ ...prev, [user]: 'view' }));
+      setShowPasswordInput(prev => ({ ...prev, [user]: false }));
+      setPasswordInput(prev => ({ ...prev, [user]: '' }));
+      setPasswordError(prev => ({ ...prev, [user]: '' }));
+      if (newMode === 'view' && mode[user] === 'edit') {
+        setInputs(prev => ({
+          ...prev,
+          [user]: { completed: '', correct: '' },
+        }));
+      }
+    } else {
+      setShowPasswordInput(prev => ({ ...prev, [user]: true }));
+      if (newMode === 'edit') {
+        setInputs(prev => ({
+          ...prev,
+          [user]: {
+            completed: stats[user].completed.toString(),
+            correct: stats[user].correct.toString(),
+          },
+        }));
+      }
+    }
+  };
+
   useEffect(() => {
     fetchData();
     fetchDailyProgress();
@@ -405,6 +463,11 @@ const QBankTracker = () => {
   };
 
   const handleSubmit = async (user: UserKey) => {
+
+    if (!verifyPassword(user, passwordInput[user])) {
+      return;
+    }
+
     const newCompleted = parseInt(inputs[user].completed) || 0;
     const newCorrect = parseInt(inputs[user].correct) || 0;
 
@@ -510,10 +573,7 @@ const QBankTracker = () => {
                   variant="ghost"
                   size="sm"
                   className="flex-1 sm:flex-initial"
-                  onClick={() => setMode(prev => ({
-                    ...prev,
-                    [user]: mode[user] === 'add' ? 'view' : 'add'
-                  }))}
+                  onClick={() => handleModeChange(user, mode[user] === 'add' ? 'view' : 'add')}
                 >
                   <Plus size={16} className="mr-1" />
                   Add Progress
@@ -522,24 +582,7 @@ const QBankTracker = () => {
                   variant="ghost"
                   size="sm"
                   className="flex-1 sm:flex-initial"
-                  onClick={() => {
-                    if (mode[user] === 'edit') {
-                      setMode(prev => ({ ...prev, [user]: 'view' }));
-                      setInputs(prev => ({
-                        ...prev,
-                        [user]: { completed: '', correct: '' },
-                      }));
-                    } else {
-                      setMode(prev => ({ ...prev, [user]: 'edit' }));
-                      setInputs(prev => ({
-                        ...prev,
-                        [user]: {
-                          completed: stats[user].completed.toString(),
-                          correct: stats[user].correct.toString(),
-                        },
-                      }));
-                    }
-                  }}
+                  onClick={() => handleModeChange(user, mode[user] === 'add' ? 'view' : 'add')}
                 >
                   <Edit2 size={16} className="mr-1" />
                   Edit Stats
@@ -547,7 +590,51 @@ const QBankTracker = () => {
               </div>
             </div>
 
-            {mode[user] !== 'view' && (
+            
+            {showPasswordInput[user] && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Lock size={16} className="text-gray-500" />
+                  <Input
+                    type="password"
+                    value={passwordInput[user]}
+                    onChange={(e) => {
+                      setPasswordInput(prev => ({ ...prev, [user]: e.target.value }));
+                      setPasswordError(prev => ({ ...prev, [user]: '' }));
+                    }}
+                    placeholder="Enter password"
+                    className="flex-1"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setShowPasswordInput(prev => ({ ...prev, [user]: false }));
+                      setPasswordInput(prev => ({ ...prev, [user]: '' }));
+                      setPasswordError(prev => ({ ...prev, [user]: '' }));
+                      setMode(prev => ({ ...prev, [user]: 'view' }));
+                    }}
+                  >
+                    <XCircle size={16} />
+                  </Button>
+                </div>
+                {passwordError[user] && (
+                  <div className="text-red-500 text-sm">{passwordError[user]}</div>
+                )}
+                <Button 
+                  onClick={() => {
+                    if (verifyPassword(user, passwordInput[user])) {
+                      setMode(prev => ({ ...prev, [user]: showPasswordInput[user] ? 'add' : 'edit' }));
+                    }
+                  }}
+                  className="w-full"
+                >
+                  Verify Password
+                </Button>
+              </div>
+            )}
+
+            {mode[user] !== 'view' && !showPasswordInput[user] && (
               <div className="space-y-2">
                 <Input
                   type="number"
@@ -575,7 +662,7 @@ const QBankTracker = () => {
               </div>
             )}
             
-            {mode[user] === 'view' && (
+            {mode[user] === 'view' && !showPasswordInput[user] && (
               <div className="space-y-1">
                 <div>Total Questions: {stats[user].completed}</div>
                 <div>Correct: {stats[user].correct}</div>
