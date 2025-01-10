@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Crown, Target, Edit2, Plus } from 'lucide-react';
+import { Crosshair,TrendingUp, Award, Crown, Target, Edit2, Plus } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import DailyProgressGraph from './DailyProgressGraph';
+import imgSrc from '@/assets/marrow.png';
 
 interface UserStats {
   completed: number;
@@ -122,38 +123,26 @@ const StatsComparison = ({ stats }: { stats: StatsType }) => {
   const user2Metrics = calculateMetrics(stats.user2);
   const comparison = determineLeader(user1Metrics, user2Metrics);
 
-  // Remove redundant points difference in VS section
-  const displayComparions = Object.entries(comparison.comparisons)
+  // Filter out points from VS display (keep accuracy, volume, effectiveScore)
+  const displayComparisons = Object.entries(comparison.comparisons)
     .filter(([key]) => key !== 'points')
     .map(([key, value]) => value);
 
-  const getComparisonBar = (leader: UserKey, value: number, metric: string) => {
-    const barWidth = `${Math.min(value * 2, 100)}%`; // Adjust scaling as needed
-    const barColor = metric === 'accuracy' ? 'bg-blue-500' : metric === 'questions' ? 'bg-purple-500' : 'bg-indigo-500';
-    return (
-      <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-        <div
-          className={`h-full ${barColor}`}
-          style={{ width: barWidth }}
-        ></div>
-      </div>
-    );
-  };
-
-  const getComparisonClass = (leader: UserKey, metric: string) => {
-    const baseClasses = "flex items-center justify-center gap-2 rounded-full px-3 py-1";
-    if (metric === 'accuracy') {
-      return `${baseClasses} bg-blue-50 text-blue-700`;
+  const getMetricIcon = (metric: string) => {
+    switch (metric) {
+      case 'accuracy':
+        return <Crosshair className="w-4 h-4" />;
+      case 'questions':
+        return <Award className="w-4 h-4" />;
+      default:
+        return <TrendingUp className="w-4 h-4" />;
     }
-    if (metric === 'questions') {
-      return `${baseClasses} bg-purple-50 text-purple-700`;
-    }
-    return `${baseClasses} bg-indigo-50 text-indigo-700`;
   };
 
   return (
     <div className="space-y-4 mb-6 p-4 bg-white rounded-lg shadow-sm">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+        {/* User 1 Stats */}
         <div className="space-y-2">
           <div className="font-medium text-lg">{stats.user1.name}</div>
           <div className="text-3xl font-bold text-blue-600">
@@ -167,27 +156,37 @@ const StatsComparison = ({ stats }: { stats: StatsType }) => {
           </div>
         </div>
 
+        {/* Comparison Section */}
         <div className="flex flex-col items-center justify-center space-y-3">
           <div className="text-xl font-semibold text-purple-600 mb-2">VS</div>
-          {displayComparions.map((value) => (
+          {displayComparisons.map((value) => (
             <div
               key={value.metric}
-              className={getComparisonClass(value.leader, value.metric)}
+              className={`w-full p-2 rounded-lg ${
+                value.leader === 'user1' ? 'bg-blue-50' : 'bg-purple-50'
+              }`}
             >
-              {value.leader === 'user1' && (
-                <span className="font-medium">{stats.user1.name}</span>
-              )}
-              <span className="text-sm whitespace-nowrap">
-                +{value.value} {value.metric}
-              </span>
-              {value.leader === 'user2' && (
-                <span className="font-medium">{stats.user2.name}</span>
-              )}
-              {getComparisonBar(value.leader, parseFloat(value.value), value.metric)}
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-1 text-gray-600">
+                  {getMetricIcon(value.metric)}
+                  <span className="text-sm capitalize">{value.metric}</span>
+                </div>
+                <span className={`text-sm font-medium ${
+                  value.leader === 'user1' ? 'text-blue-600' : 'text-purple-600'
+                }`}>
+                  {stats[value.leader].name}
+                </span>
+              </div>
+              <div className="flex justify-between items-baseline">
+                <span className="text-lg font-bold">
+                  +{value.value}
+                </span>
+              </div>
             </div>
           ))}
         </div>
 
+        {/* User 2 Stats */}
         <div className="space-y-2">
           <div className="font-medium text-lg">{stats.user2.name}</div>
           <div className="text-3xl font-bold text-blue-600">
@@ -483,8 +482,11 @@ const QBankTracker = () => {
   return (
     <Card className="w-full max-w-xl bg-gradient-to-br from-slate-50 to-slate-100 shadow-lg">
       <CardHeader className="space-y-1">
+        <div className = "flex justify-center">
+          <img src={imgSrc} alt="Marrow Logo" className="w-12 h-12" />
+        </div>
         <CardTitle className="text-2xl text-center font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-          QBank Challenge
+          Marrow QBank Challenge
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">

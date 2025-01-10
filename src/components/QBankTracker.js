@@ -3,9 +3,10 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Crown, Target, Edit2, Plus } from 'lucide-react';
+import { Crosshair, TrendingUp, Award, Crown, Target, Edit2, Plus } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import DailyProgressGraph from './DailyProgressGraph';
+import imgSrc from '@/assets/marrow.png';
 const calculateAccuracy = (correct, total) => {
     if (total === 0)
         return '0';
@@ -65,26 +66,21 @@ const StatsComparison = ({ stats }) => {
     const user1Metrics = calculateMetrics(stats.user1);
     const user2Metrics = calculateMetrics(stats.user2);
     const comparison = determineLeader(user1Metrics, user2Metrics);
-    // Remove redundant points difference in VS section
-    const displayComparions = Object.entries(comparison.comparisons)
+    // Filter out points from VS display (keep accuracy, volume, effectiveScore)
+    const displayComparisons = Object.entries(comparison.comparisons)
         .filter(([key]) => key !== 'points')
         .map(([key, value]) => value);
-    const getComparisonBar = (leader, value, metric) => {
-        const barWidth = `${Math.min(value * 2, 100)}%`; // Adjust scaling as needed
-        const barColor = metric === 'accuracy' ? 'bg-blue-500' : metric === 'questions' ? 'bg-purple-500' : 'bg-indigo-500';
-        return (_jsx("div", { className: "w-full h-2 bg-gray-200 rounded-full overflow-hidden", children: _jsx("div", { className: `h-full ${barColor}`, style: { width: barWidth } }) }));
-    };
-    const getComparisonClass = (leader, metric) => {
-        const baseClasses = "flex items-center justify-center gap-2 rounded-full px-3 py-1";
-        if (metric === 'accuracy') {
-            return `${baseClasses} bg-blue-50 text-blue-700`;
+    const getMetricIcon = (metric) => {
+        switch (metric) {
+            case 'accuracy':
+                return _jsx(Crosshair, { className: "w-4 h-4" });
+            case 'questions':
+                return _jsx(Award, { className: "w-4 h-4" });
+            default:
+                return _jsx(TrendingUp, { className: "w-4 h-4" });
         }
-        if (metric === 'questions') {
-            return `${baseClasses} bg-purple-50 text-purple-700`;
-        }
-        return `${baseClasses} bg-indigo-50 text-indigo-700`;
     };
-    return (_jsxs("div", { className: "space-y-4 mb-6 p-4 bg-white rounded-lg shadow-sm", children: [_jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-4 text-center", children: [_jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "font-medium text-lg", children: stats.user1.name }), _jsxs("div", { className: "text-3xl font-bold text-blue-600", children: [user1Metrics.accuracy, "%"] }), _jsxs("div", { className: "text-sm text-gray-600", children: [stats.user1.completed, " cards"] }), _jsxs("div", { className: "text-sm font-medium text-purple-600", children: [user1Metrics.points, " points"] })] }), _jsxs("div", { className: "flex flex-col items-center justify-center space-y-3", children: [_jsx("div", { className: "text-xl font-semibold text-purple-600 mb-2", children: "VS" }), displayComparions.map((value) => (_jsxs("div", { className: getComparisonClass(value.leader, value.metric), children: [value.leader === 'user1' && (_jsx("span", { className: "font-medium", children: stats.user1.name })), _jsxs("span", { className: "text-sm whitespace-nowrap", children: ["+", value.value, " ", value.metric] }), value.leader === 'user2' && (_jsx("span", { className: "font-medium", children: stats.user2.name })), getComparisonBar(value.leader, parseFloat(value.value), value.metric)] }, value.metric)))] }), _jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "font-medium text-lg", children: stats.user2.name }), _jsxs("div", { className: "text-3xl font-bold text-blue-600", children: [user2Metrics.accuracy, "%"] }), _jsxs("div", { className: "text-sm text-gray-600", children: [stats.user2.completed, " cards"] }), _jsxs("div", { className: "text-sm font-medium text-purple-600", children: [user2Metrics.points, " points"] })] })] }), _jsxs("div", { className: "flex justify-center items-center space-x-2 bg-yellow-50 rounded-full px-4 py-2", children: [_jsx(Crown, { size: 16, className: "text-yellow-500" }), _jsxs("span", { className: "text-sm font-medium text-yellow-700", children: [stats[comparison.overallLeader].name, " is leading with ", comparison.comparisons.points.value, " more points!"] })] }), _jsx("div", { className: "text-xs text-center text-gray-500 mt-2", children: "Points = Questions Completed + Bonus for Accuracy above 80%" })] }));
+    return (_jsxs("div", { className: "space-y-4 mb-6 p-4 bg-white rounded-lg shadow-sm", children: [_jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-4 text-center", children: [_jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "font-medium text-lg", children: stats.user1.name }), _jsxs("div", { className: "text-3xl font-bold text-blue-600", children: [user1Metrics.accuracy, "%"] }), _jsxs("div", { className: "text-sm text-gray-600", children: [stats.user1.completed, " cards"] }), _jsxs("div", { className: "text-sm font-medium text-purple-600", children: [user1Metrics.points, " points"] })] }), _jsxs("div", { className: "flex flex-col items-center justify-center space-y-3", children: [_jsx("div", { className: "text-xl font-semibold text-purple-600 mb-2", children: "VS" }), displayComparisons.map((value) => (_jsxs("div", { className: `w-full p-2 rounded-lg ${value.leader === 'user1' ? 'bg-blue-50' : 'bg-purple-50'}`, children: [_jsxs("div", { className: "flex items-center justify-between mb-1", children: [_jsxs("div", { className: "flex items-center gap-1 text-gray-600", children: [getMetricIcon(value.metric), _jsx("span", { className: "text-sm capitalize", children: value.metric })] }), _jsx("span", { className: `text-sm font-medium ${value.leader === 'user1' ? 'text-blue-600' : 'text-purple-600'}`, children: stats[value.leader].name })] }), _jsx("div", { className: "flex justify-between items-baseline", children: _jsxs("span", { className: "text-lg font-bold", children: ["+", value.value] }) })] }, value.metric)))] }), _jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "font-medium text-lg", children: stats.user2.name }), _jsxs("div", { className: "text-3xl font-bold text-blue-600", children: [user2Metrics.accuracy, "%"] }), _jsxs("div", { className: "text-sm text-gray-600", children: [stats.user2.completed, " cards"] }), _jsxs("div", { className: "text-sm font-medium text-purple-600", children: [user2Metrics.points, " points"] })] })] }), _jsxs("div", { className: "flex justify-center items-center space-x-2 bg-yellow-50 rounded-full px-4 py-2", children: [_jsx(Crown, { size: 16, className: "text-yellow-500" }), _jsxs("span", { className: "text-sm font-medium text-yellow-700", children: [stats[comparison.overallLeader].name, " is leading with ", comparison.comparisons.points.value, " more points!"] })] }), _jsx("div", { className: "text-xs text-center text-gray-500 mt-2", children: "Points = Questions Completed + Bonus for Accuracy above 80%" })] }));
 };
 const QBankTracker = () => {
     const [stats, setStats] = useState({
@@ -302,7 +298,7 @@ const QBankTracker = () => {
             console.error('Failed to update data:', error);
         }
     };
-    return (_jsxs(Card, { className: "w-full max-w-xl bg-gradient-to-br from-slate-50 to-slate-100 shadow-lg", children: [_jsx(CardHeader, { className: "space-y-1", children: _jsx(CardTitle, { className: "text-2xl text-center font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent", children: "QBank Challenge" }) }), _jsxs(CardContent, { className: "space-y-6", children: [_jsx(StatsComparison, { stats: stats }), ['user1', 'user2'].map((user) => (_jsxs("div", { className: "space-y-3 p-4 rounded-lg bg-white shadow-sm", children: [_jsxs("div", { className: "flex flex-wrap gap-3", children: [_jsxs("div", { className: "flex items-center gap-2", children: [_jsx(Target, { className: "text-blue-500", size: 20 }), _jsx("span", { className: "font-medium", children: stats[user].name })] }), _jsxs("div", { className: "flex flex-wrap ml-auto gap-2 w-full sm:w-auto", children: [_jsxs(Button, { variant: "ghost", size: "sm", className: "flex-1 sm:flex-initial", onClick: () => setMode(prev => ({
+    return (_jsxs(Card, { className: "w-full max-w-xl bg-gradient-to-br from-slate-50 to-slate-100 shadow-lg", children: [_jsxs(CardHeader, { className: "space-y-1", children: [_jsx("div", { className: "flex justify-center", children: _jsx("img", { src: imgSrc, alt: "Marrow Logo", className: "w-12 h-12" }) }), _jsx(CardTitle, { className: "text-2xl text-center font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent", children: "Marrow QBank Challenge" })] }), _jsxs(CardContent, { className: "space-y-6", children: [_jsx(StatsComparison, { stats: stats }), ['user1', 'user2'].map((user) => (_jsxs("div", { className: "space-y-3 p-4 rounded-lg bg-white shadow-sm", children: [_jsxs("div", { className: "flex flex-wrap gap-3", children: [_jsxs("div", { className: "flex items-center gap-2", children: [_jsx(Target, { className: "text-blue-500", size: 20 }), _jsx("span", { className: "font-medium", children: stats[user].name })] }), _jsxs("div", { className: "flex flex-wrap ml-auto gap-2 w-full sm:w-auto", children: [_jsxs(Button, { variant: "ghost", size: "sm", className: "flex-1 sm:flex-initial", onClick: () => setMode(prev => ({
                                                     ...prev,
                                                     [user]: mode[user] === 'add' ? 'view' : 'add'
                                                 })), children: [_jsx(Plus, { size: 16, className: "mr-1" }), "Add Progress"] }), _jsxs(Button, { variant: "ghost", size: "sm", className: "flex-1 sm:flex-initial", onClick: () => {
