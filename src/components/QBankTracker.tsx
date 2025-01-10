@@ -152,7 +152,7 @@ const StatsComparison = ({ stats }: { stats: StatsType }) => {
             {stats.user1.completed} questions
           </div>
           <div className="text-sm text-gray-600">
-            {stats.user2.correct} correct
+            {stats.user1.correct} correct
           </div>
           <div className="text-sm font-medium text-purple-600">
             {user1Metrics.points} points
