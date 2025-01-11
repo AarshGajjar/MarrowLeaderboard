@@ -3,8 +3,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Toggle } from '@/components/ui/toggle';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Bar, ComposedChart, Area, AreaChart } from 'recharts';
-import { TrendingUp, TrendingDown, ArrowRight, Calendar } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Bar, ComposedChart } from 'recharts';
+import { TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
 
 interface DailyProgress {
   date: string;
@@ -32,7 +32,6 @@ const DailyProgressGraph = ({
 }) => {
   const [dateRange, setDateRange] = useState('all');
   const [showTrendLines, setShowTrendLines] = useState(false);
-  const [selectedMetrics, setSelectedMetrics] = useState(['completed', 'correct']);
 
   // Process data to include more metrics
   const processedData = useMemo(() => {
@@ -40,23 +39,18 @@ const DailyProgressGraph = ({
       const user1Accuracy = (day.user1Correct / day.user1Completed * 100);
       const user2Accuracy = (day.user2Correct / day.user2Completed * 100);
       
-      // Calculate improvement rates (day-over-day change)
-      const user1Improvement = day.user1Correct / day.user1Completed;
-      const user2Improvement = day.user2Correct / day.user2Completed;
-
       return {
         ...day,
         date: new Date(day.date).toLocaleDateString(),
         user1Accuracy: user1Accuracy.toFixed(1),
         user2Accuracy: user2Accuracy.toFixed(1),
-        user1ImprovementRate: (user1Improvement * 100).toFixed(1),
-        user2ImprovementRate: (user2Improvement * 100).toFixed(1),
+        user1ImprovementRate: (user1Accuracy).toFixed(1),
+        user2ImprovementRate: (user2Accuracy).toFixed(1),
         totalCompleted: day.user1Completed + day.user2Completed,
         totalCorrect: day.user1Correct + day.user2Correct,
       };
     }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    // Filter based on date range
     if (dateRange === 'week') {
       const lastWeek = new Date();
       lastWeek.setDate(lastWeek.getDate() - 7);
@@ -102,7 +96,7 @@ const DailyProgressGraph = ({
   const MetricCard = ({ title, value, trend, icon }: MetricCard) => (
     <div className="bg-white rounded-lg p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <span className="text-sm text-gray-500">{title}</span>
+        <span className="text-sm text-gray-500 truncate">{title}</span>
         {icon}
       </div>
       <div className="mt-2 flex items-center">
@@ -118,9 +112,9 @@ const DailyProgressGraph = ({
   return (
     <Card className="w-full mt-6">
       <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-lg">Performance Analytics Dashboard</CardTitle>
-          <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <CardTitle className="text-lg">Performance Analytics</CardTitle>
+          <div className="flex flex-wrap gap-4">
             <Select value={dateRange} onValueChange={setDateRange}>
               <SelectTrigger className="w-32">
                 <SelectValue placeholder="Date Range" />
@@ -142,28 +136,27 @@ const DailyProgressGraph = ({
         </div>
       </CardHeader>
       <CardContent>
-        {/* Summary Metrics */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           {summaryMetrics.map((metric, index) => (
             <MetricCard key={index} {...metric} />
           ))}
         </div>
 
         <Tabs defaultValue="progress" className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="progress">Progress Overview</TabsTrigger>
-            <TabsTrigger value="accuracy">Accuracy Analysis</TabsTrigger>
-            <TabsTrigger value="trends">Performance Trends</TabsTrigger>
+          <TabsList className="mb-4 flex flex-wrap">
+            <TabsTrigger value="progress">Progress</TabsTrigger>
+            <TabsTrigger value="accuracy">Accuracy</TabsTrigger>
+            <TabsTrigger value="trends">Trends</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="progress" className="h-[400px]">
+          <TabsContent value="progress" className="h-[400px] min-w-0">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={processedData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <ComposedChart data={processedData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                <XAxis dataKey="date" />
-                <YAxis />
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar 
                   dataKey="user1Completed" 
                   fill="#8884d8" 
@@ -182,7 +175,7 @@ const DailyProgressGraph = ({
                   stroke="#8884d8"
                   strokeWidth={2}
                   name={`${user1Name} Correct`}
-                  dot={{ r: 4 }}
+                  dot={{ r: 3 }}
                 />
                 <Line
                   type="monotone"
@@ -190,35 +183,35 @@ const DailyProgressGraph = ({
                   stroke="#82ca9d"
                   strokeWidth={2}
                   name={`${user2Name} Correct`}
-                  dot={{ r: 4 }}
+                  dot={{ r: 3 }}
                 />
               </ComposedChart>
             </ResponsiveContainer>
           </TabsContent>
 
-          <TabsContent value="accuracy" className="h-[400px]">
+          <TabsContent value="accuracy" className="h-[400px] min-w-0">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={processedData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <LineChart data={processedData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                <XAxis dataKey="date" />
-                <YAxis domain={[0, 100]} unit="%" />
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                <YAxis domain={[0, 100]} unit="%" tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Legend />
-                <Area
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Line
                   type="monotone"
                   dataKey="user1Accuracy"
-                  fill="#8884d8"
                   stroke="#8884d8"
-                  fillOpacity={0.3}
+                  strokeWidth={2}
                   name={`${user1Name} Accuracy`}
+                  dot={{ r: 3 }}
                 />
-                <Area
+                <Line
                   type="monotone"
                   dataKey="user2Accuracy"
-                  fill="#82ca9d"
                   stroke="#82ca9d"
-                  fillOpacity={0.3}
+                  strokeWidth={2}
                   name={`${user2Name} Accuracy`}
+                  dot={{ r: 3 }}
                 />
                 {showTrendLines && (
                   <>
@@ -228,6 +221,7 @@ const DailyProgressGraph = ({
                       stroke="#8884d8"
                       strokeDasharray="5 5"
                       name={`${user1Name} Trend`}
+                      dot={false}
                     />
                     <Line
                       type="linear"
@@ -235,28 +229,29 @@ const DailyProgressGraph = ({
                       stroke="#82ca9d"
                       strokeDasharray="5 5"
                       name={`${user2Name} Trend`}
+                      dot={false}
                     />
                   </>
                 )}
-              </AreaChart>
+              </LineChart>
             </ResponsiveContainer>
           </TabsContent>
 
-          <TabsContent value="trends" className="h-[400px]">
+          <TabsContent value="trends" className="h-[400px] min-w-0">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={processedData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <LineChart data={processedData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                <XAxis dataKey="date" />
-                <YAxis domain={[0, 100]} unit="%" />
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                <YAxis domain={[0, 100]} unit="%" tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Line
                   type="monotone"
                   dataKey="user1ImprovementRate"
                   stroke="#8884d8"
                   strokeWidth={2}
                   name={`${user1Name} Improvement`}
-                  dot={{ r: 4 }}
+                  dot={{ r: 3 }}
                 />
                 <Line
                   type="monotone"
@@ -264,7 +259,7 @@ const DailyProgressGraph = ({
                   stroke="#82ca9d"
                   strokeWidth={2}
                   name={`${user2Name} Improvement`}
-                  dot={{ r: 4 }}
+                  dot={{ r: 3 }}
                 />
               </LineChart>
             </ResponsiveContainer>
