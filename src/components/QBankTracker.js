@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Crosshair, TrendingUp, Award, Crown, Target, Edit2, Plus, Lock, XCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import DailyProgressGraph from './DailyProgressGraph';
+import ProgressDashboard from './DailyProgressGraph';
 import imgSrc from '@/assets/marrow.png';
 const calculateAccuracy = (correct, total) => {
     if (total === 0)
@@ -81,6 +81,16 @@ const StatsComparison = ({ stats }) => {
         }
     };
     return (_jsxs("div", { className: "space-y-4 mb-6 p-4 bg-white rounded-lg shadow-sm", children: [_jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-4 text-center", children: [_jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "font-medium text-lg", children: stats.user1.name }), _jsxs("div", { className: "text-3xl font-bold text-blue-600", children: [user1Metrics.accuracy, "%"] }), _jsxs("div", { className: "text-sm text-gray-600", children: [stats.user1.completed, " questions"] }), _jsxs("div", { className: "text-sm text-gray-600", children: [stats.user1.correct, " correct"] }), _jsxs("div", { className: "text-sm font-medium text-purple-600", children: [user1Metrics.points, " points"] })] }), _jsxs("div", { className: "flex flex-col items-center justify-center space-y-3", children: [_jsx("div", { className: "text-xl font-semibold text-purple-600 mb-2", children: "VS" }), displayComparisons.map((value) => (_jsxs("div", { className: `w-full p-2 rounded-lg ${value.leader === 'user1' ? 'bg-blue-50' : 'bg-purple-50'}`, children: [_jsxs("div", { className: "flex items-center justify-between mb-1", children: [_jsxs("div", { className: "flex items-center gap-1 text-gray-600", children: [getMetricIcon(value.metric), _jsx("span", { className: "text-sm capitalize", children: value.metric })] }), _jsx("span", { className: `text-sm font-medium ${value.leader === 'user1' ? 'text-blue-600' : 'text-purple-600'}`, children: stats[value.leader].name })] }), _jsx("div", { className: "flex justify-between items-baseline", children: _jsxs("span", { className: "text-lg font-bold", children: ["+", value.value] }) })] }, value.metric)))] }), _jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "font-medium text-lg", children: stats.user2.name }), _jsxs("div", { className: "text-3xl font-bold text-blue-600", children: [user2Metrics.accuracy, "%"] }), _jsxs("div", { className: "text-sm text-gray-600", children: [stats.user2.completed, " questions"] }), _jsxs("div", { className: "text-sm text-gray-600", children: [stats.user2.correct, " correct"] }), _jsxs("div", { className: "text-sm font-medium text-purple-600", children: [user2Metrics.points, " points"] })] })] }), _jsxs("div", { className: "flex justify-center items-center space-x-2 bg-yellow-50 rounded-full px-4 py-2", children: [_jsx(Crown, { size: 16, className: "text-yellow-500" }), _jsxs("span", { className: "text-sm font-medium text-yellow-700", children: [stats[comparison.overallLeader].name, " is leading with ", comparison.comparisons.points.value, " more points!"] })] }), _jsx("div", { className: "text-xs text-center text-gray-500 mt-2", children: "Points = Questions Completed + Bonus for Accuracy above 80%" })] }));
+};
+const calculateEfficiency = (completed, correct) => {
+    if (completed === 0)
+        return 0;
+    // Base efficiency is the accuracy percentage
+    const accuracy = (correct / completed) * 100;
+    // Add completion bonus (10% bonus for completing more than 200 questions)
+    const completionBonus = completed >= 200 ? 10 : 0;
+    // Final efficiency score capped at 100
+    return Math.min(100, Math.round(accuracy + completionBonus));
 };
 const QBankTracker = () => {
     const [stats, setStats] = useState({
@@ -367,6 +377,24 @@ const QBankTracker = () => {
                                             if (verifyPassword(user, passwordInput[user])) {
                                                 setMode(prev => ({ ...prev, [user]: showPasswordInput[user] ? 'add' : 'edit' }));
                                             }
-                                        }, className: "w-full", children: "Verify Password" })] })), mode[user] !== 'view' && !showPasswordInput[user] && (_jsxs("div", { className: "space-y-2", children: [_jsx(Input, { type: "number", value: inputs[user].completed, onChange: (e) => handleInputChange(user, 'completed', e.target.value), placeholder: mode[user] === 'add' ? "Questions completed in this session" : "Total questions completed", className: "w-full" }), _jsx(Input, { type: "number", value: inputs[user].correct, onChange: (e) => handleInputChange(user, 'correct', e.target.value), placeholder: mode[user] === 'add' ? "Correct answers in this session" : "Total correct answers", className: "w-full" }), error[user] && (_jsx("div", { className: "text-red-500 text-sm", children: error[user] })), _jsx(Button, { onClick: () => handleSubmit(user), className: "w-full", children: mode[user] === 'add' ? 'Add Progress' : 'Update Stats' })] })), mode[user] === 'view' && !showPasswordInput[user] && (_jsxs("div", { className: "space-y-1", children: [_jsxs("div", { children: ["Total Questions: ", stats[user].completed] }), _jsxs("div", { children: ["Correct: ", stats[user].correct] }), _jsxs("div", { className: "font-semibold text-lg", children: ["Accuracy: ", calculateAccuracy(stats[user].correct, stats[user].completed), "%"] })] }))] }, user))), dailyProgress.length > 0 && (_jsx(DailyProgressGraph, { dailyData: dailyProgress, user1Name: stats.user1.name, user2Name: stats.user2.name }))] })] }));
+                                        }, className: "w-full", children: "Verify Password" })] })), mode[user] !== 'view' && !showPasswordInput[user] && (_jsxs("div", { className: "space-y-2", children: [_jsx(Input, { type: "number", value: inputs[user].completed, onChange: (e) => handleInputChange(user, 'completed', e.target.value), placeholder: mode[user] === 'add' ? "Questions completed in this session" : "Total questions completed", className: "w-full" }), _jsx(Input, { type: "number", value: inputs[user].correct, onChange: (e) => handleInputChange(user, 'correct', e.target.value), placeholder: mode[user] === 'add' ? "Correct answers in this session" : "Total correct answers", className: "w-full" }), error[user] && (_jsx("div", { className: "text-red-500 text-sm", children: error[user] })), _jsx(Button, { onClick: () => handleSubmit(user), className: "w-full", children: mode[user] === 'add' ? 'Add Progress' : 'Update Stats' })] })), mode[user] === 'view' && !showPasswordInput[user] && (_jsxs("div", { className: "space-y-1", children: [_jsxs("div", { children: ["Total Questions: ", stats[user].completed] }), _jsxs("div", { children: ["Correct: ", stats[user].correct] }), _jsxs("div", { className: "font-semibold text-lg", children: ["Accuracy: ", calculateAccuracy(stats[user].correct, stats[user].completed), "%"] })] }))] }, user))), dailyProgress.length > 0 && (_jsx(ProgressDashboard, { dailyData: dailyProgress.map(day => ({
+                            date: day.date,
+                            user1Data: {
+                                date: day.date,
+                                completed: day.user1Completed,
+                                correct: day.user1Correct,
+                                accuracy: (day.user1Correct / day.user1Completed * 100) || 0,
+                                goalProgress: (day.user1Correct / day.user1Completed * 100) || 0,
+                                efficiency: calculateEfficiency(day.user1Completed, day.user1Correct)
+                            },
+                            user2Data: {
+                                date: day.date,
+                                completed: day.user2Completed,
+                                correct: day.user2Correct,
+                                accuracy: (day.user2Correct / day.user2Completed * 100) || 0,
+                                goalProgress: (day.user2Correct / day.user2Completed * 100) || 0,
+                                efficiency: calculateEfficiency(day.user2Completed, day.user2Correct)
+                            }
+                        })), user1Name: stats.user1.name, user2Name: stats.user2.name }))] })] }));
 };
 export default QBankTracker;

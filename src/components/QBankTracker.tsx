@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {  Crosshair, TrendingUp, Award, Crown, Target, Edit2, Plus, Lock, XCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import DailyProgressGraph from './DailyProgressGraph';
+import ProgressDashboard from './DailyProgressGraph';
 import imgSrc from '@/assets/marrow.png';
 
 interface UserStats {
@@ -223,6 +223,17 @@ const StatsComparison = ({ stats }: { stats: StatsType }) => {
   );
 };
 
+const calculateEfficiency = (completed: number, correct: number) => {
+  if (completed === 0) return 0;
+  // Base efficiency is the accuracy percentage
+  const accuracy = (correct / completed) * 100;
+  
+  // Add completion bonus (10% bonus for completing more than 200 questions)
+  const completionBonus = completed >= 200 ? 10 : 0;
+  
+  // Final efficiency score capped at 100
+  return Math.min(100, Math.round(accuracy + completionBonus));
+};
 
 const QBankTracker = () => {
   const [stats, setStats] = useState<{ user1: UserStats; user2: UserStats }>({
@@ -673,10 +684,27 @@ const QBankTracker = () => {
             )}
           </div>
         ))}
-
         {dailyProgress.length > 0 && (
-          <DailyProgressGraph 
-            dailyData={dailyProgress}
+          <ProgressDashboard 
+            dailyData={dailyProgress.map(day => ({
+              date: day.date,
+              user1Data: {
+          date: day.date,
+          completed: day.user1Completed,
+          correct: day.user1Correct,
+          accuracy: (day.user1Correct / day.user1Completed * 100) || 0,
+          goalProgress: (day.user1Correct / day.user1Completed * 100) || 0,
+          efficiency: calculateEfficiency(day.user1Completed, day.user1Correct)
+              },
+              user2Data: {
+          date: day.date,
+          completed: day.user2Completed,
+          correct: day.user2Correct,
+          accuracy: (day.user2Correct / day.user2Completed * 100) || 0,
+          goalProgress: (day.user2Correct / day.user2Completed * 100) || 0,
+          efficiency: calculateEfficiency(day.user2Completed, day.user2Correct)
+              }
+            }))}
             user1Name={stats.user1.name}
             user2Name={stats.user2.name}
           />

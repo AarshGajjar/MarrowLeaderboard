@@ -1,69 +1,114 @@
-import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useMemo, useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Toggle } from '@/components/ui/toggle';
+import { Progress } from '@/components/ui/progress';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Bar, ComposedChart } from 'recharts';
-import { TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
-const DailyProgressGraph = ({ dailyData, user1Name, user2Name }) => {
-    const [dateRange, setDateRange] = useState('all');
-    const [showTrendLines, setShowTrendLines] = useState(false);
-    // Process data to include more metrics
-    const processedData = useMemo(() => {
-        const data = dailyData.map(day => {
-            const user1Accuracy = (day.user1Correct / day.user1Completed * 100);
-            const user2Accuracy = (day.user2Correct / day.user2Completed * 100);
-            return {
-                ...day,
-                date: new Date(day.date).toLocaleDateString(),
-                user1Accuracy: user1Accuracy.toFixed(1),
-                user2Accuracy: user2Accuracy.toFixed(1),
-                user1ImprovementRate: (user1Accuracy).toFixed(1),
-                user2ImprovementRate: (user2Accuracy).toFixed(1),
-                totalCompleted: day.user1Completed + day.user2Completed,
-                totalCorrect: day.user1Correct + day.user2Correct,
-            };
-        }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+import { Target, Flame, Calendar } from 'lucide-react';
+const DAILY_TARGET = 300;
+const MetricCard = ({ title, value, icon, subtitle, }) => (_jsx(Card, { children: _jsx(CardContent, { className: "pt-6 px-6 pb-4", children: _jsxs("div", { className: "flex items-start justify-between", children: [_jsxs("div", { children: [_jsx("p", { className: "text-sm font-medium text-gray-500", children: title }), _jsx("p", { className: "mt-2 text-2xl font-semibold", children: value }), subtitle && _jsx("p", { className: "mt-1 text-sm text-gray-500", children: subtitle })] }), _jsx("div", { className: "rounded-full p-2 bg-gray-100", children: icon })] }) }) }));
+const ProgressDashboard = ({ dailyData = [], user1Name, user2Name }) => {
+    const [dateRange, setDateRange] = useState('week');
+    const [selectedUser, setSelectedUser] = useState('both');
+    const filteredData = useMemo(() => {
+        if (!dailyData?.length)
+            return [];
+        const now = new Date();
+        const cutoffDate = new Date();
         if (dateRange === 'week') {
-            const lastWeek = new Date();
-            lastWeek.setDate(lastWeek.getDate() - 7);
-            return data.filter(item => new Date(item.date) >= lastWeek);
+            cutoffDate.setDate(now.getDate() - 7);
         }
-        if (dateRange === 'month') {
-            const lastMonth = new Date();
-            lastMonth.setMonth(lastMonth.getMonth() - 1);
-            return data.filter(item => new Date(item.date) >= lastMonth);
+        else {
+            cutoffDate.setDate(now.getDate() - 30);
         }
-        return data;
+        return dailyData.filter(day => new Date(day.date) >= cutoffDate);
     }, [dailyData, dateRange]);
-    // Calculate summary metrics
-    const summaryMetrics = useMemo(() => {
-        const latest = processedData[processedData.length - 1];
-        const previous = processedData[processedData.length - 2];
-        const getTrend = (current, prev) => ((current - prev) / prev * 100);
-        return [
-            {
-                title: 'Total Completion Rate',
-                value: `${((latest.totalCorrect / latest.totalCompleted) * 100).toFixed(1)}%`,
-                trend: getTrend(latest.totalCorrect / latest.totalCompleted, previous.totalCorrect / previous.totalCompleted),
-                icon: _jsx(TrendingUp, { className: "h-4 w-4" })
-            },
-            {
-                title: `${user1Name}'s Accuracy`,
-                value: `${latest.user1Accuracy}%`,
-                trend: getTrend(Number(latest.user1Accuracy), Number(previous.user1Accuracy)),
-                icon: _jsx(ArrowRight, { className: "h-4 w-4" })
-            },
-            {
-                title: `${user2Name}'s Accuracy`,
-                value: `${latest.user2Accuracy}%`,
-                trend: getTrend(Number(latest.user2Accuracy), Number(previous.user2Accuracy)),
-                icon: _jsx(ArrowRight, { className: "h-4 w-4" })
+    const stats = useMemo(() => {
+        const calculateUserStats = (userData) => {
+            if (!userData?.length)
+                return { currentStreak: 0, dailyAverage: 0, todayProgress: 0 };
+            let currentStreak = 0;
+            const now = new Date();
+            const sortedData = [...userData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            for (const day of sortedData) {
+                const dayDate = new Date(day.date);
+                if (dayDate.toDateString() === now.toDateString() && day.completed < DAILY_TARGET) {
+                    currentStreak = sortedData.length > 1 ? currentStreak : 0;
+                    continue;
+                }
+                if (day.completed >= DAILY_TARGET) {
+                    currentStreak++;
+                }
+                else {
+                    break;
+                }
             }
-        ];
-    }, [processedData, user1Name, user2Name]);
-    const MetricCard = ({ title, value, trend, icon }) => (_jsxs("div", { className: "bg-white rounded-lg p-4 shadow-sm", children: [_jsxs("div", { className: "flex items-center justify-between", children: [_jsx("span", { className: "text-sm text-gray-500 truncate", children: title }), icon] }), _jsxs("div", { className: "mt-2 flex items-center", children: [_jsx("span", { className: "text-2xl font-semibold", children: value }), _jsxs("span", { className: `ml-2 flex items-center ${trend > 0 ? 'text-green-500' : 'text-red-500'}`, children: [trend > 0 ? _jsx(TrendingUp, { className: "h-4 w-4" }) : _jsx(TrendingDown, { className: "h-4 w-4" }), Math.abs(trend).toFixed(1), "%"] })] })] }));
-    return (_jsxs(Card, { className: "w-full mt-6", children: [_jsx(CardHeader, { children: _jsxs("div", { className: "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4", children: [_jsx(CardTitle, { className: "text-lg", children: "Performance Analytics" }), _jsxs("div", { className: "flex flex-wrap gap-4", children: [_jsxs(Select, { value: dateRange, onValueChange: setDateRange, children: [_jsx(SelectTrigger, { className: "w-32", children: _jsx(SelectValue, { placeholder: "Date Range" }) }), _jsxs(SelectContent, { children: [_jsx(SelectItem, { value: "all", children: "All Time" }), _jsx(SelectItem, { value: "week", children: "Last Week" }), _jsx(SelectItem, { value: "month", children: "Last Month" })] })] }), _jsx(Toggle, { pressed: showTrendLines, onPressedChange: setShowTrendLines, "aria-label": "Toggle trend lines", children: _jsx(TrendingUp, { className: "h-4 w-4" }) })] })] }) }), _jsxs(CardContent, { children: [_jsx("div", { className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6", children: summaryMetrics.map((metric, index) => (_jsx(MetricCard, { ...metric }, index))) }), _jsxs(Tabs, { defaultValue: "progress", className: "w-full", children: [_jsxs(TabsList, { className: "mb-4 flex flex-wrap", children: [_jsx(TabsTrigger, { value: "progress", children: "Progress" }), _jsx(TabsTrigger, { value: "accuracy", children: "Accuracy" }), _jsx(TabsTrigger, { value: "trends", children: "Trends" })] }), _jsx(TabsContent, { value: "progress", className: "h-[400px] min-w-0", children: _jsx(ResponsiveContainer, { width: "100%", height: "100%", children: _jsxs(ComposedChart, { data: processedData, margin: { top: 5, right: 10, left: 0, bottom: 5 }, children: [_jsx(CartesianGrid, { strokeDasharray: "3 3", opacity: 0.3 }), _jsx(XAxis, { dataKey: "date", tick: { fontSize: 12 } }), _jsx(YAxis, { tick: { fontSize: 12 } }), _jsx(Tooltip, {}), _jsx(Legend, { wrapperStyle: { fontSize: 12 } }), _jsx(Bar, { dataKey: "user1Completed", fill: "#8884d8", opacity: 0.2, name: `${user1Name} Total` }), _jsx(Bar, { dataKey: "user2Completed", fill: "#82ca9d", opacity: 0.2, name: `${user2Name} Total` }), _jsx(Line, { type: "monotone", dataKey: "user1Correct", stroke: "#8884d8", strokeWidth: 2, name: `${user1Name} Correct`, dot: { r: 3 } }), _jsx(Line, { type: "monotone", dataKey: "user2Correct", stroke: "#82ca9d", strokeWidth: 2, name: `${user2Name} Correct`, dot: { r: 3 } })] }) }) }), _jsx(TabsContent, { value: "accuracy", className: "h-[400px] min-w-0", children: _jsx(ResponsiveContainer, { width: "100%", height: "100%", children: _jsxs(LineChart, { data: processedData, margin: { top: 5, right: 10, left: 0, bottom: 5 }, children: [_jsx(CartesianGrid, { strokeDasharray: "3 3", opacity: 0.3 }), _jsx(XAxis, { dataKey: "date", tick: { fontSize: 12 } }), _jsx(YAxis, { domain: [0, 100], unit: "%", tick: { fontSize: 12 } }), _jsx(Tooltip, {}), _jsx(Legend, { wrapperStyle: { fontSize: 12 } }), _jsx(Line, { type: "monotone", dataKey: "user1Accuracy", stroke: "#8884d8", strokeWidth: 2, name: `${user1Name} Accuracy`, dot: { r: 3 } }), _jsx(Line, { type: "monotone", dataKey: "user2Accuracy", stroke: "#82ca9d", strokeWidth: 2, name: `${user2Name} Accuracy`, dot: { r: 3 } }), showTrendLines && (_jsxs(_Fragment, { children: [_jsx(Line, { type: "linear", dataKey: "user1Accuracy", stroke: "#8884d8", strokeDasharray: "5 5", name: `${user1Name} Trend`, dot: false }), _jsx(Line, { type: "linear", dataKey: "user2Accuracy", stroke: "#82ca9d", strokeDasharray: "5 5", name: `${user2Name} Trend`, dot: false })] }))] }) }) }), _jsx(TabsContent, { value: "trends", className: "h-[400px] min-w-0", children: _jsx(ResponsiveContainer, { width: "100%", height: "100%", children: _jsxs(LineChart, { data: processedData, margin: { top: 5, right: 10, left: 0, bottom: 5 }, children: [_jsx(CartesianGrid, { strokeDasharray: "3 3", opacity: 0.3 }), _jsx(XAxis, { dataKey: "date", tick: { fontSize: 12 } }), _jsx(YAxis, { domain: [0, 100], unit: "%", tick: { fontSize: 12 } }), _jsx(Tooltip, {}), _jsx(Legend, { wrapperStyle: { fontSize: 12 } }), _jsx(Line, { type: "monotone", dataKey: "user1ImprovementRate", stroke: "#8884d8", strokeWidth: 2, name: `${user1Name} Improvement`, dot: { r: 3 } }), _jsx(Line, { type: "monotone", dataKey: "user2ImprovementRate", stroke: "#82ca9d", strokeWidth: 2, name: `${user2Name} Improvement`, dot: { r: 3 } })] }) }) })] })] })] }));
+            const dailyAverage = Math.round(userData.reduce((sum, day) => sum + day.completed, 0) / userData.length);
+            const today = new Date().toISOString().split('T')[0];
+            const todayData = userData.find(day => day.date === today);
+            const todayProgress = todayData ? todayData.completed : 0;
+            return { currentStreak, dailyAverage, todayProgress };
+        };
+        const user1Data = filteredData.map(d => d.user1Data);
+        const user2Data = filteredData.map(d => d.user2Data);
+        return {
+            user1Stats: calculateUserStats(user1Data),
+            user2Stats: calculateUserStats(user2Data)
+        };
+    }, [filteredData]);
+    const calculateGoalProgress = (data) => {
+        if (selectedUser === 'both') {
+            const totalCompleted = data.user1Data.completed + data.user2Data.completed;
+            const totalCorrect = data.user1Data.correct + data.user2Data.correct;
+            return {
+                completed: totalCompleted,
+                correct: totalCorrect,
+                accuracy: totalCompleted > 0 ? Math.round((totalCorrect / totalCompleted) * 100 * 10) / 10 : 0
+            };
+        }
+        const userData = selectedUser === 'user1' ? data.user1Data : data.user2Data;
+        return {
+            completed: userData.completed,
+            correct: userData.correct,
+            accuracy: userData.completed > 0 ? Math.round((userData.correct / userData.completed) * 100 * 10) / 10 : 0
+        };
+    };
+    const processedData = useMemo(() => {
+        return filteredData.map(data => ({
+            ...data,
+            processedData: calculateGoalProgress(data)
+        }));
+    }, [filteredData, selectedUser]);
+    const trendData = useMemo(() => {
+        const windowSize = 7;
+        return filteredData.map((data, index) => {
+            const window = filteredData.slice(Math.max(0, index - windowSize + 1), index + 1);
+            const avgCompleted = window.reduce((sum, d) => {
+                const stats = calculateGoalProgress(d);
+                return sum + stats.completed;
+            }, 0) / window.length;
+            const avgAccuracy = window.reduce((sum, d) => {
+                const stats = calculateGoalProgress(d);
+                return sum + stats.accuracy;
+            }, 0) / window.length;
+            return {
+                date: data.date,
+                avgCompleted: Math.round(avgCompleted * 10) / 10,
+                avgAccuracy: Math.round(avgAccuracy * 10) / 10
+            };
+        });
+    }, [filteredData, selectedUser]);
+    const selectedStats = selectedUser === 'user1'
+        ? stats.user1Stats
+        : selectedUser === 'user2'
+            ? stats.user2Stats
+            : {
+                currentStreak: Math.max(stats.user1Stats.currentStreak, stats.user2Stats.currentStreak),
+                dailyAverage: stats.user1Stats.dailyAverage + stats.user2Stats.dailyAverage,
+                todayProgress: stats.user1Stats.todayProgress + stats.user2Stats.todayProgress
+            };
+    const targetQuestions = selectedUser === 'both' ? DAILY_TARGET * 2 : DAILY_TARGET;
+    return (_jsxs("div", { className: "space-y-6", children: [_jsx("div", { className: "flex justify-between gap-4 mb-6", children: _jsxs(Select, { value: selectedUser, onValueChange: setSelectedUser, children: [_jsx(SelectTrigger, { className: "w-40", children: _jsx(SelectValue, { placeholder: "Select User" }) }), _jsxs(SelectContent, { children: [_jsx(SelectItem, { value: "both", children: "Both Users" }), _jsx(SelectItem, { value: "user1", children: user1Name }), _jsx(SelectItem, { value: "user2", children: user2Name })] })] }) }), _jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-3", children: [_jsx(MetricCard, { title: "Current Streak", value: `${selectedStats.currentStreak} days`, icon: _jsx(Flame, { className: "h-4 w-4 text-orange-500" }), subtitle: "Days with target completed" }), _jsx(MetricCard, { title: "Daily Average", value: `${selectedStats.dailyAverage} questions`, icon: _jsx(Calendar, { className: "h-4 w-4 text-purple-500" }), subtitle: "Questions completed per day" }), _jsx(MetricCard, { title: "Today's Progress", value: `${selectedStats.todayProgress}/${targetQuestions}`, icon: _jsx(Target, { className: "h-4 w-4 text-blue-500" }), subtitle: `${Math.round((selectedStats.todayProgress / targetQuestions) * 100)}% of daily target` })] }), _jsxs("div", { className: "mt-4", children: [_jsx(Progress, { value: (selectedStats.todayProgress / targetQuestions) * 100 }), _jsxs("p", { className: "text-sm text-gray-500 mt-1", children: [selectedStats.todayProgress, " of ", targetQuestions, " questions completed today"] })] }), _jsxs(Tabs, { defaultValue: "progress", className: "w-full", children: [_jsxs(TabsList, { children: [_jsx(TabsTrigger, { value: "progress", children: "Progress" }), _jsx(TabsTrigger, { value: "trends", children: "Trends" })] }), _jsxs(TabsContent, { value: "progress", className: "min-h-[400px] h-[50vh]", children: [_jsx("div", { className: "mb-4", children: _jsxs(Select, { value: dateRange, onValueChange: setDateRange, children: [_jsx(SelectTrigger, { className: "w-40", children: _jsx(SelectValue, { placeholder: "Date Range" }) }), _jsxs(SelectContent, { children: [_jsx(SelectItem, { value: "week", children: "Last Week" }), _jsx(SelectItem, { value: "month", children: "Last Month" })] })] }) }), _jsx(ResponsiveContainer, { width: "100%", height: "100%", children: _jsxs(ComposedChart, { data: processedData, margin: { top: 20, right: 20, bottom: 20, left: 20 }, children: [_jsx(CartesianGrid, { strokeDasharray: "3 3", opacity: 0.3 }), _jsx(XAxis, { dataKey: "date" }), _jsx(YAxis, { yAxisId: "left", label: { value: 'Questions', angle: -90, position: 'insideLeft' }, domain: [0, 'auto'] }), _jsx(YAxis, { yAxisId: "right", orientation: "right", label: { value: 'Accuracy %', angle: 90, position: 'insideRight' }, domain: [0, 100] }), _jsx(Tooltip, {}), _jsx(Legend, { verticalAlign: "top", height: 36 }), _jsx(Bar, { yAxisId: "left", dataKey: "processedData.completed", fill: "#93c5fd", name: "Questions Completed", opacity: 0.3 }), _jsx(Line, { yAxisId: "right", type: "monotone", dataKey: "processedData.accuracy", stroke: "#7c3aed", name: "Accuracy" })] }) })] }), _jsxs(TabsContent, { value: "trends", className: "min-h-[400px] h-[50vh]", children: [_jsx("div", { className: "mb-4", children: _jsxs(Select, { value: dateRange, onValueChange: setDateRange, children: [_jsx(SelectTrigger, { className: "w-40", children: _jsx(SelectValue, { placeholder: "Date Range" }) }), _jsxs(SelectContent, { children: [_jsx(SelectItem, { value: "week", children: "Last Week" }), _jsx(SelectItem, { value: "month", children: "Last Month" })] })] }) }), _jsx(ResponsiveContainer, { width: "100%", height: "100%", children: _jsxs(LineChart, { data: trendData, margin: { top: 20, right: 20, bottom: 20, left: 20 }, children: [_jsx(CartesianGrid, { strokeDasharray: "3 3", opacity: 0.3 }), _jsx(XAxis, { dataKey: "date" }), _jsx(YAxis, { yAxisId: "left", label: { value: 'Avg. Questions', angle: -90, position: 'insideLeft' }, domain: [0, 'auto'] }), _jsx(YAxis, { yAxisId: "right", orientation: "right", label: { value: 'Avg. Accuracy %', angle: 90, position: 'insideRight' }, domain: [0, 100] }), _jsx(Tooltip, {}), _jsx(Legend, { verticalAlign: "top", height: 36 }), _jsx(Line, { yAxisId: "left", type: "monotone", dataKey: "avgCompleted", stroke: "#93c5fd", name: "7-day Avg. Completed" }), _jsx(Line, { yAxisId: "right", type: "monotone", dataKey: "avgAccuracy", stroke: "#7c3aed", name: "7-day Avg. Accuracy" })] }) })] })] })] }));
 };
-export default DailyProgressGraph;
+export default ProgressDashboard;

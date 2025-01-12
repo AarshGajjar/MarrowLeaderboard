@@ -2,272 +2,321 @@ import React, { useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Toggle } from '@/components/ui/toggle';
+import { Progress } from '@/components/ui/progress';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Bar, ComposedChart } from 'recharts';
-import { TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, Target, Zap, Flame, Calendar } from 'lucide-react';
 
-interface DailyProgress {
+interface UserProgress {
   date: string;
-  user1Completed: number;
-  user1Correct: number;
-  user2Completed: number;
-  user2Correct: number;
+  completed: number;
+  correct: number;
+  accuracy: number;
 }
 
-interface MetricCard {
-  title: string;
-  value: string | number;
-  trend: number;
-  icon: React.ReactNode;
+interface DailyData {
+  date: string;
+  user1Data: UserProgress;
+  user2Data: UserProgress;
 }
 
-const DailyProgressGraph = ({ 
-  dailyData, 
-  user1Name, 
-  user2Name 
-}: { 
-  dailyData: DailyProgress[];
+interface ProgressDashboardProps {
+  dailyData: DailyData[];
   user1Name: string;
   user2Name: string;
-}) => {
-  const [dateRange, setDateRange] = useState('all');
-  const [showTrendLines, setShowTrendLines] = useState(false);
+}
 
-  // Process data to include more metrics
-  const processedData = useMemo(() => {
-    const data = dailyData.map(day => {
-      const user1Accuracy = (day.user1Correct / day.user1Completed * 100);
-      const user2Accuracy = (day.user2Correct / day.user2Completed * 100);
-      
-      return {
-        ...day,
-        date: new Date(day.date).toLocaleDateString(),
-        user1Accuracy: user1Accuracy.toFixed(1),
-        user2Accuracy: user2Accuracy.toFixed(1),
-        user1ImprovementRate: (user1Accuracy).toFixed(1),
-        user2ImprovementRate: (user2Accuracy).toFixed(1),
-        totalCompleted: day.user1Completed + day.user2Completed,
-        totalCorrect: day.user1Correct + day.user2Correct,
-      };
-    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+interface MetricCardProps {
+  title: string;
+  value: string;
+  icon: React.ReactNode;
+  subtitle: string;
+}
 
+const DAILY_TARGET = 300;
+
+const MetricCard: React.FC<MetricCardProps> = ({
+  title,
+  value,
+  icon,
+  subtitle,
+}) => (
+  <Card>
+    <CardContent className="pt-6 px-6 pb-4">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-500">{title}</p>
+          <p className="mt-2 text-2xl font-semibold">{value}</p>
+          {subtitle && <p className="mt-1 text-sm text-gray-500">{subtitle}</p>}
+        </div>
+        <div className="rounded-full p-2 bg-gray-100">{icon}</div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], user1Name, user2Name }) => {
+  const [dateRange, setDateRange] = useState('week');
+  const [selectedUser, setSelectedUser] = useState('both');
+
+  const filteredData = useMemo(() => {
+    if (!dailyData?.length) return [];
+    
+    const now = new Date();
+    const cutoffDate = new Date();
+    
     if (dateRange === 'week') {
-      const lastWeek = new Date();
-      lastWeek.setDate(lastWeek.getDate() - 7);
-      return data.filter(item => new Date(item.date) >= lastWeek);
+      cutoffDate.setDate(now.getDate() - 7);
+    } else {
+      cutoffDate.setDate(now.getDate() - 30);
     }
-    if (dateRange === 'month') {
-      const lastMonth = new Date();
-      lastMonth.setMonth(lastMonth.getMonth() - 1);
-      return data.filter(item => new Date(item.date) >= lastMonth);
-    }
-    return data;
+  
+    return dailyData.filter(day => new Date(day.date) >= cutoffDate);
   }, [dailyData, dateRange]);
 
-  // Calculate summary metrics
-  const summaryMetrics = useMemo(() => {
-    const latest = processedData[processedData.length - 1];
-    const previous = processedData[processedData.length - 2];
-    
-    const getTrend = (current: number, prev: number) => ((current - prev) / prev * 100);
-    
-    return [
-      {
-        title: 'Total Completion Rate',
-        value: `${((latest.totalCorrect / latest.totalCompleted) * 100).toFixed(1)}%`,
-        trend: getTrend(latest.totalCorrect / latest.totalCompleted, previous.totalCorrect / previous.totalCompleted),
-        icon: <TrendingUp className="h-4 w-4" />
-      },
-      {
-        title: `${user1Name}'s Accuracy`,
-        value: `${latest.user1Accuracy}%`,
-        trend: getTrend(Number(latest.user1Accuracy), Number(previous.user1Accuracy)),
-        icon: <ArrowRight className="h-4 w-4" />
-      },
-      {
-        title: `${user2Name}'s Accuracy`,
-        value: `${latest.user2Accuracy}%`,
-        trend: getTrend(Number(latest.user2Accuracy), Number(previous.user2Accuracy)),
-        icon: <ArrowRight className="h-4 w-4" />
-      }
-    ];
-  }, [processedData, user1Name, user2Name]);
+  const stats = useMemo(() => {
+    const calculateUserStats = (userData: UserProgress[]) => {
+      if (!userData?.length) return { currentStreak: 0, dailyAverage: 0, todayProgress: 0 };
 
-  const MetricCard = ({ title, value, trend, icon }: MetricCard) => (
-    <div className="bg-white rounded-lg p-4 shadow-sm">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-gray-500 truncate">{title}</span>
-        {icon}
-      </div>
-      <div className="mt-2 flex items-center">
-        <span className="text-2xl font-semibold">{value}</span>
-        <span className={`ml-2 flex items-center ${trend > 0 ? 'text-green-500' : 'text-red-500'}`}>
-          {trend > 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-          {Math.abs(trend).toFixed(1)}%
-        </span>
-      </div>
-    </div>
-  );
+      let currentStreak = 0;
+      const now = new Date();
+      const sortedData = [...userData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      for (const day of sortedData) {
+        const dayDate = new Date(day.date);
+        if (dayDate.toDateString() === now.toDateString() && day.completed < DAILY_TARGET) {
+          currentStreak = sortedData.length > 1 ? currentStreak : 0;
+          continue;
+        }
+        if (day.completed >= DAILY_TARGET) {
+          currentStreak++;
+        } else {
+          break;
+        }
+      }
+
+      const dailyAverage = Math.round(
+        userData.reduce((sum, day) => sum + day.completed, 0) / userData.length
+      );
+
+      const today = new Date().toISOString().split('T')[0];
+      const todayData = userData.find(day => day.date === today);
+      const todayProgress = todayData ? todayData.completed : 0;
+
+      return { currentStreak, dailyAverage, todayProgress };
+    };
+
+    const user1Data = filteredData.map(d => d.user1Data);
+    const user2Data = filteredData.map(d => d.user2Data);
+
+    return {
+      user1Stats: calculateUserStats(user1Data),
+      user2Stats: calculateUserStats(user2Data)
+    };
+  }, [filteredData]);
+
+  const calculateGoalProgress = (data: DailyData) => {
+    if (selectedUser === 'both') {
+      const totalCompleted = data.user1Data.completed + data.user2Data.completed;
+      const totalCorrect = data.user1Data.correct + data.user2Data.correct;
+      return {
+        completed: totalCompleted,
+        correct: totalCorrect,
+        accuracy: totalCompleted > 0 ? Math.round((totalCorrect / totalCompleted) * 100 * 10) / 10 : 0
+      };
+    }
+    const userData = selectedUser === 'user1' ? data.user1Data : data.user2Data;
+    return {
+      completed: userData.completed,
+      correct: userData.correct,
+      accuracy: userData.completed > 0 ? Math.round((userData.correct / userData.completed) * 100 * 10) / 10 : 0
+    };
+  };
+
+  const processedData = useMemo(() => {
+    return filteredData.map(data => ({
+      ...data,
+      processedData: calculateGoalProgress(data)
+    }));
+  }, [filteredData, selectedUser]);
+
+  const trendData = useMemo(() => {
+    const windowSize = 7;
+    return filteredData.map((data, index) => {
+      const window = filteredData.slice(Math.max(0, index - windowSize + 1), index + 1);
+      const avgCompleted = window.reduce((sum, d) => {
+        const stats = calculateGoalProgress(d);
+        return sum + stats.completed;
+      }, 0) / window.length;
+      const avgAccuracy = window.reduce((sum, d) => {
+        const stats = calculateGoalProgress(d);
+        return sum + stats.accuracy;
+      }, 0) / window.length;
+
+      return {
+        date: data.date,
+        avgCompleted: Math.round(avgCompleted * 10) / 10,
+        avgAccuracy: Math.round(avgAccuracy * 10) / 10
+      };
+    });
+  }, [filteredData, selectedUser]);
+
+  const selectedStats = selectedUser === 'user1' 
+    ? stats.user1Stats 
+    : selectedUser === 'user2' 
+      ? stats.user2Stats
+      : {
+          currentStreak: Math.max(stats.user1Stats.currentStreak, stats.user2Stats.currentStreak),
+          dailyAverage: stats.user1Stats.dailyAverage + stats.user2Stats.dailyAverage,
+          todayProgress: stats.user1Stats.todayProgress + stats.user2Stats.todayProgress
+        };
+
+  const targetQuestions = selectedUser === 'both' ? DAILY_TARGET * 2 : DAILY_TARGET;
 
   return (
-    <Card className="w-full mt-6">
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-lg">Performance Analytics</CardTitle>
-          <div className="flex flex-wrap gap-4">
+    <div className="space-y-6">
+      <div className="flex justify-between gap-4 mb-6">
+        <Select value={selectedUser} onValueChange={setSelectedUser}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Select User" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="both">Both Users</SelectItem>
+            <SelectItem value="user1">{user1Name}</SelectItem>
+            <SelectItem value="user2">{user2Name}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <MetricCard
+          title="Current Streak"
+          value={`${selectedStats.currentStreak} days`}
+          icon={<Flame className="h-4 w-4 text-orange-500" />}
+          subtitle="Days with target completed"
+        />
+        <MetricCard
+          title="Daily Average"
+          value={`${selectedStats.dailyAverage} questions`}
+          icon={<Calendar className="h-4 w-4 text-purple-500" />}
+          subtitle="Questions completed per day"
+        />
+        <MetricCard
+          title="Today's Progress"
+          value={`${selectedStats.todayProgress}/${targetQuestions}`}
+          icon={<Target className="h-4 w-4 text-blue-500" />}
+          subtitle={`${Math.round((selectedStats.todayProgress / targetQuestions) * 100)}% of daily target`}
+        />
+      </div>
+
+      <div className="mt-4">
+        <Progress value={(selectedStats.todayProgress / targetQuestions) * 100} />
+        <p className="text-sm text-gray-500 mt-1">
+          {selectedStats.todayProgress} of {targetQuestions} questions completed today
+        </p>
+      </div>
+
+      <Tabs defaultValue="progress" className="w-full">
+        <TabsList>
+          <TabsTrigger value="progress">Progress</TabsTrigger>
+          <TabsTrigger value="trends">Trends</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="progress" className="min-h-[400px] h-[50vh]">
+          <div className="mb-4">
             <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-40">
                 <SelectValue placeholder="Date Range" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
                 <SelectItem value="week">Last Week</SelectItem>
                 <SelectItem value="month">Last Month</SelectItem>
               </SelectContent>
             </Select>
-            <Toggle 
-              pressed={showTrendLines} 
-              onPressedChange={setShowTrendLines}
-              aria-label="Toggle trend lines"
-            >
-              <TrendingUp className="h-4 w-4" />
-            </Toggle>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-          {summaryMetrics.map((metric, index) => (
-            <MetricCard key={index} {...metric} />
-          ))}
-        </div>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={processedData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+              <XAxis dataKey="date" />
+              <YAxis 
+                yAxisId="left"
+                label={{ value: 'Questions', angle: -90, position: 'insideLeft' }}
+                domain={[0, 'auto']}
+              />
+              <YAxis 
+                yAxisId="right" 
+                orientation="right"
+                label={{ value: 'Accuracy %', angle: 90, position: 'insideRight' }}
+                domain={[0, 100]}
+              />
+              <Tooltip />
+              <Legend verticalAlign="top" height={36} />
+              <Bar
+                yAxisId="left"
+                dataKey="processedData.completed"
+                fill="#93c5fd"
+                name="Questions Completed"
+                opacity={0.3}
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="processedData.accuracy"
+                stroke="#7c3aed"
+                name="Accuracy"
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </TabsContent>
 
-        <Tabs defaultValue="progress" className="w-full">
-          <TabsList className="mb-4 flex flex-wrap">
-            <TabsTrigger value="progress">Progress</TabsTrigger>
-            <TabsTrigger value="accuracy">Accuracy</TabsTrigger>
-            <TabsTrigger value="trends">Trends</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="progress" className="h-[400px] min-w-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={processedData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar 
-                  dataKey="user1Completed" 
-                  fill="#8884d8" 
-                  opacity={0.2} 
-                  name={`${user1Name} Total`}
-                />
-                <Bar 
-                  dataKey="user2Completed" 
-                  fill="#82ca9d" 
-                  opacity={0.2}
-                  name={`${user2Name} Total`}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="user1Correct"
-                  stroke="#8884d8"
-                  strokeWidth={2}
-                  name={`${user1Name} Correct`}
-                  dot={{ r: 3 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="user2Correct"
-                  stroke="#82ca9d"
-                  strokeWidth={2}
-                  name={`${user2Name} Correct`}
-                  dot={{ r: 3 }}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </TabsContent>
-
-          <TabsContent value="accuracy" className="h-[400px] min-w-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={processedData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                <YAxis domain={[0, 100]} unit="%" tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line
-                  type="monotone"
-                  dataKey="user1Accuracy"
-                  stroke="#8884d8"
-                  strokeWidth={2}
-                  name={`${user1Name} Accuracy`}
-                  dot={{ r: 3 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="user2Accuracy"
-                  stroke="#82ca9d"
-                  strokeWidth={2}
-                  name={`${user2Name} Accuracy`}
-                  dot={{ r: 3 }}
-                />
-                {showTrendLines && (
-                  <>
-                    <Line
-                      type="linear"
-                      dataKey="user1Accuracy"
-                      stroke="#8884d8"
-                      strokeDasharray="5 5"
-                      name={`${user1Name} Trend`}
-                      dot={false}
-                    />
-                    <Line
-                      type="linear"
-                      dataKey="user2Accuracy"
-                      stroke="#82ca9d"
-                      strokeDasharray="5 5"
-                      name={`${user2Name} Trend`}
-                      dot={false}
-                    />
-                  </>
-                )}
-              </LineChart>
-            </ResponsiveContainer>
-          </TabsContent>
-
-          <TabsContent value="trends" className="h-[400px] min-w-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={processedData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                <YAxis domain={[0, 100]} unit="%" tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line
-                  type="monotone"
-                  dataKey="user1ImprovementRate"
-                  stroke="#8884d8"
-                  strokeWidth={2}
-                  name={`${user1Name} Improvement`}
-                  dot={{ r: 3 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="user2ImprovementRate"
-                  stroke="#82ca9d"
-                  strokeWidth={2}
-                  name={`${user2Name} Improvement`}
-                  dot={{ r: 3 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+        <TabsContent value="trends" className="min-h-[400px] h-[50vh]">
+          <div className="mb-4">
+            <Select value={dateRange} onValueChange={setDateRange}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Date Range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="week">Last Week</SelectItem>
+                <SelectItem value="month">Last Month</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={trendData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+              <XAxis dataKey="date" />
+              <YAxis 
+                yAxisId="left"
+                label={{ value: 'Avg. Questions', angle: -90, position: 'insideLeft' }}
+                domain={[0, 'auto']}
+              />
+              <YAxis 
+                yAxisId="right" 
+                orientation="right"
+                label={{ value: 'Avg. Accuracy %', angle: 90, position: 'insideRight' }}
+                domain={[0, 100]}
+              />
+              <Tooltip />
+              <Legend verticalAlign="top" height={36} />
+              <Line
+                yAxisId="left"
+                type="monotone"
+                dataKey="avgCompleted"
+                stroke="#93c5fd"
+                name="7-day Avg. Completed"
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="avgAccuracy"
+                stroke="#7c3aed"
+                name="7-day Avg. Accuracy"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 
-export default DailyProgressGraph;
+export default ProgressDashboard;
