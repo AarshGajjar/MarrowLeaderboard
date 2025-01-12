@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
@@ -24,20 +24,21 @@ interface ProgressDashboardProps {
   dailyData: DailyData[];
   user1Name: string;
   user2Name: string;
+  getDate?: () => string; 
 }
 
 const DAILY_TARGET = 300;
 const MIN_ACCURACY_TARGET = 70;
 
-const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], user1Name, user2Name }) => {
+const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], user1Name, user2Name,  getDate = () => new Date().toISOString().split('T')[0] }) => {
   const [dateRange, setDateRange] = useState('week');
   const [selectedUser, setSelectedUser] = useState('both');
 
   const filteredData = useMemo(() => {
     if (!dailyData?.length) return [];
     
-    const now = new Date();
-    const cutoffDate = new Date();
+    const now = new Date(getDate());
+    const cutoffDate = new Date(getDate());
     
     switch(dateRange) {
       case 'week':
@@ -65,7 +66,7 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
       };
 
       let currentStreak = 0;
-      const now = new Date();
+      const now = new Date(getDate());
       const sortedData = [...userData].sort((a, b) => 
       new Date(b.date).getTime() - new Date(a.date).getTime()
       );
@@ -198,154 +199,218 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
 
   const targetQuestions = selectedUser === 'both' ? DAILY_TARGET * 2 : DAILY_TARGET;
 
+  const progressPercentage = (selectedStats.todayProgress / targetQuestions) * 100;
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between gap-4 mb-6">
-        <Select value={selectedUser} onValueChange={setSelectedUser}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Select User" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="both">Both Users</SelectItem>
-            <SelectItem value="user1">{user1Name}</SelectItem>
-            <SelectItem value="user2">{user2Name}</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <MetricCard
-          title="Current Streak"
-          value={`${selectedStats.currentStreak}`}
-          valueUnit = "days"
-          icon={<Flame className="h-4 w-4" />}
-          tooltip="Days with target completed (excluding Sundays)"
-          iconColor="#f97316"
-        />
-        <MetricCard
-          title="Daily Average"
-          value={selectedStats.dailyAverage}
-          valueUnit="questions"
-          icon={<Calendar className="h-4 w-4" />}
-          tooltip="Average questions per day (excluding Sundays)"
-          iconColor="#a855f7"
-        />
-        <MetricCard
-          title="Study Consistency"
-          value={selectedStats.studyConsistency}
-          valueUnit="%"
-          icon={<Brain className="h-4 w-4" />}
-          tooltip="Days meeting targets (last 30 days, excluding Sundays)"
-          iconColor="#4ec9b0"
-        />
-      </div>
-
-      <div className="mt-4">
-        <Progress value={(selectedStats.todayProgress / targetQuestions) * 100} />
-        <p className="text-sm text-gray-500 mt-1">
-          {selectedStats.todayProgress} of {targetQuestions} questions completed today ({Math.round((selectedStats.todayProgress / targetQuestions) * 100)}%) 
-        </p>
-      </div>
-
-      <Tabs defaultValue="progress" className="w-full">
-        <TabsList>
-          <TabsTrigger value="progress">Progress</TabsTrigger>
-          <TabsTrigger value="trends">Trends</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="progress" className="min-h-[400px] h-[50vh]">
-          <div className="mb-4">
-            <Select value={dateRange} onValueChange={setDateRange}>
+    <div className="w-full space-y-6">
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="text-xl md:text-2xl">Study Progress Dashboard</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-between gap-4 mb-6">
+            <Select value={selectedUser} onValueChange={setSelectedUser}>
               <SelectTrigger className="w-40">
-                <SelectValue placeholder="Date Range" />
+                <SelectValue placeholder="Select User" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="week">Last Week</SelectItem>
-                <SelectItem value="month">Last Month</SelectItem>
-                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="both">Both Users</SelectItem>
+                <SelectItem value="user1">{user1Name}</SelectItem>
+                <SelectItem value="user2">{user2Name}</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={processedData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis dataKey="date" />
-              <YAxis 
-                yAxisId="left"
-                label={{ value: 'Questions', angle: -90, position: 'insideLeft' }}
-                domain={[0, 'auto']}
-              />
-              <YAxis 
-                yAxisId="right" 
-                orientation="right"
-                label={{ value: 'Accuracy %', angle: 90, position: 'insideRight' }}
-                domain={[0, 100]}
-              />
-              <Tooltip />
-              <Bar
-                yAxisId="left"
-                dataKey="processedData.completed"
-                fill="#93c5fd"
-                name="Questions Completed"
-                opacity={0.3}
-              />
-              <Line
-                yAxisId="right"
-                type="monotone"
-                dataKey="processedData.accuracy"
-                stroke="#7c3aed"
-                name="Accuracy"
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </TabsContent>
 
-        <TabsContent value="trends" className="min-h-[400px] h-[50vh]">
-          <div className="mb-4">
-            <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Date Range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="week">Last Week</SelectItem>
-                <SelectItem value="month">Last Month</SelectItem>
-                <SelectItem value="all">All Time</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* Conditional rendering for metric cards based on selection */}
+          {selectedUser === "both" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <MetricCard
+                title="Daily Average"
+                value={selectedStats.dailyAverage}
+                valueUnit="questions"
+                icon={<Calendar className="h-4 w-4" />}
+                tooltip="Average questions per day (excluding Sundays)"
+                iconColor="#a855f7"
+              />
+              <MetricCard
+                title="Study Consistency"
+                value={selectedStats.studyConsistency}
+                valueUnit="%"
+                icon={<Brain className="h-4 w-4" />}
+                tooltip="Days meeting targets (last 30 days, excluding Sundays)"
+                iconColor="#4ec9b0"
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <MetricCard
+                title="Current Streak"
+                value={selectedStats.currentStreak}
+                valueUnit="days"
+                icon={<Flame className="h-4 w-4" />}
+                tooltip="Days with target completed (excluding Sundays)"
+                iconColor="#f97316"
+              />
+              <MetricCard
+                title="Daily Average"
+                value={selectedStats.dailyAverage}
+                valueUnit="questions"
+                icon={<Calendar className="h-4 w-4" />}
+                tooltip="Average questions per day (excluding Sundays)"
+                iconColor="#a855f7"
+              />
+              <MetricCard
+                title="Study Consistency"
+                value={selectedStats.studyConsistency}
+                valueUnit="%"
+                icon={<Brain className="h-4 w-4" />}
+                tooltip="Days meeting targets (last 30 days, excluding Sundays)"
+                iconColor="#4ec9b0"
+              />
+            </div>
+          )}
+  
+          <div className="w-full mt-4">
+            <Progress value={progressPercentage} />
+            <p className="text-sm text-gray-500 mt-1">
+              {selectedStats.todayProgress} of {targetQuestions} questions completed today ({Math.round((selectedStats.todayProgress / targetQuestions) * 100)}%) 
+            </p>
           </div>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={trendData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis dataKey="date" />
-              <YAxis 
-                yAxisId="left"
-                label={{ value: 'Avg. Questions', angle: -90, position: 'insideLeft' }}
-                domain={[0, 'auto']}
-              />
-              <YAxis 
-                yAxisId="right" 
-                orientation="right"
-                label={{ value: 'Avg. Accuracy %', angle: 90, position: 'insideRight' }}
-                domain={[0, 100]}
-              />
-              <Tooltip />
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="avgCompleted"
-                stroke="#93c5fd"
-                name="7-day Avg. Completed"
-              />
-              <Line
-                yAxisId="right"
-                type="monotone"
-                dataKey="avgAccuracy"
-                stroke="#7c3aed"
-                name="7-day Avg. Accuracy"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </TabsContent>
-      </Tabs>
+  
+          <div className="w-full mt-6">
+            <Tabs defaultValue="progress" className="w-full">
+              <TabsList className="w-full sm:w-auto">
+                <TabsTrigger value="progress">Progress</TabsTrigger>
+                <TabsTrigger value="trends">Trends</TabsTrigger>
+              </TabsList>
+  
+              <TabsContent value="progress">
+                <div className="mb-4">
+                  <Select value={dateRange} onValueChange={setDateRange}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Date Range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="week">Last Week</SelectItem>
+                      <SelectItem value="month">Last Month</SelectItem>
+                      <SelectItem value="all">All Time</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="w-full aspect-[4/3] sm:aspect-[16/9]">
+                  <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={processedData} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 12 }}
+                    tickMargin={10}
+                    />
+                    <YAxis 
+                    yAxisId="left"
+                    label={{ value: 'Questions', angle: -90, position: 'insideLeft', offset: 0 }}
+                    domain={[0, 'auto']}
+                    tick={{ fontSize: 12 }}
+                    />
+                    <YAxis 
+                    yAxisId="right" 
+                    orientation="right"
+                    label={{ value: 'Accuracy %', angle: 90, position: 'insideRight', offset: 0 }}
+                    domain={[0, 100]}
+                    tick={{ fontSize: 12 }}
+                    />
+                    <Tooltip 
+                    formatter={(value, name) => {
+                      if (name === "Accuracy") {
+                      return [`${value}%`, name];
+                      }
+                      return [value, name];
+                    }}
+                    />
+                    <Bar
+                    yAxisId="left"
+                    dataKey="processedData.completed"
+                    fill="#93c5fd"
+                    name="Questions Completed"
+                    opacity={0.3}
+                    />
+                    <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="processedData.accuracy"
+                    stroke="#7c3aed"
+                    name="Accuracy"
+                    />
+                  </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+                </TabsContent>
+
+                <TabsContent value="trends">
+                <div className="mb-4">
+                  <Select value={dateRange} onValueChange={setDateRange}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Date Range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="week">Last Week</SelectItem>
+                    <SelectItem value="month">Last Month</SelectItem>
+                    <SelectItem value="all">All Time</SelectItem>
+                  </SelectContent>
+                  </Select>
+                </div>
+                <div className="w-full aspect-[4/3] sm:aspect-[16/9]">
+                  <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trendData} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 12 }}
+                    tickMargin={10}
+                    />
+                    <YAxis 
+                    yAxisId="left"
+                    label={{ value: 'Avg. Questions', angle: -90, position: 'insideLeft', offset: 0 }}
+                    domain={[0, 'auto']}
+                    tick={{ fontSize: 12 }}
+                    />
+                    <YAxis 
+                    yAxisId="right" 
+                    orientation="right"
+                    label={{ value: 'Avg. Accuracy %', angle: 90, position: 'insideRight', offset: 0 }}
+                    domain={[0, 100]}
+                    tick={{ fontSize: 12 }}
+                    />
+                    <Tooltip 
+                    formatter={(value, name) => {
+                      if (name === "7-day Avg. Accuracy") {
+                      return [`${value}%`, name];
+                      }
+                      return [value, name];
+                    }}
+                    />
+                    <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="avgCompleted"
+                    stroke="#93c5fd"
+                    name="7-day Avg. Completed"
+                    />
+                    <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="avgAccuracy"
+                    stroke="#7c3aed"
+                    name="7-day Avg. Accuracy"
+                    />
+                  </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -72,6 +72,14 @@ interface ComparisonResult {
   user2Metrics: ReturnType<typeof calculateMetrics>;
 }
 
+// Function to get current date in IST
+const getISTDate = () => {
+  const date = new Date();
+  // Convert to IST (UTC+5:30)
+  const istTime = date.getTime() + (5.5 * 60 * 60 * 1000);
+  const istDate = new Date(istTime);
+  return istDate.toISOString().split('T')[0];
+};
 
 const determineLeader = (
   user1Metrics: ReturnType<typeof calculateMetrics>,
@@ -389,7 +397,7 @@ const QBankTracker = () => {
   };
 
   const updateDailyProgress = async (user: UserKey, completed: number, correct: number) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getISTDate(); // Use IST date instead of local date
     
     
     try {
@@ -707,6 +715,7 @@ const QBankTracker = () => {
             }))}
             user1Name={stats.user1.name}
             user2Name={stats.user2.name}
+            getDate={getISTDate}
           />
         )}
       </CardContent>

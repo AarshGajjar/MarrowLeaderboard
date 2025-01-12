@@ -24,6 +24,14 @@ const calculateMetrics = (stats) => {
         effectiveScore: stats.correct
     };
 };
+// Function to get current date in IST
+const getISTDate = () => {
+    const date = new Date();
+    // Convert to IST (UTC+5:30)
+    const istTime = date.getTime() + (5.5 * 60 * 60 * 1000);
+    const istDate = new Date(istTime);
+    return istDate.toISOString().split('T')[0];
+};
 const determineLeader = (user1Metrics, user2Metrics) => {
     const compareAndGetLeader = (value1, value2) => {
         return value1 >= value2 ? 'user1' : 'user2';
@@ -226,7 +234,7 @@ const QBankTracker = () => {
         }
     };
     const updateDailyProgress = async (user, completed, correct) => {
-        const today = new Date().toISOString().split('T')[0];
+        const today = getISTDate(); // Use IST date instead of local date
         try {
             console.log('Updating daily progress for:', { user, completed, correct, today }); // Debug log
             // First, try to get today's entry
@@ -395,6 +403,6 @@ const QBankTracker = () => {
                                 goalProgress: (day.user2Correct / day.user2Completed * 100) || 0,
                                 efficiency: calculateEfficiency(day.user2Completed, day.user2Correct)
                             }
-                        })), user1Name: stats.user1.name, user2Name: stats.user2.name }))] })] }));
+                        })), user1Name: stats.user1.name, user2Name: stats.user2.name, getDate: getISTDate }))] })] }));
 };
 export default QBankTracker;
