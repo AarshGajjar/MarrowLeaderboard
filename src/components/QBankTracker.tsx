@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {  Crosshair, TrendingUp, Award, Crown, Target, Edit2, Plus, Lock, XCircle } from 'lucide-react';
+import { Crosshair, TrendingUp, Award, Target, Plus, Lock, XCircle, Clock, Crown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ProgressDashboard from './DailyProgressGraph';
 import imgSrc from '@/assets/marrow.png';
+
+// Type definitions
+type UserKey = 'user1' | 'user2';
 
 interface UserStats {
   completed: number;
@@ -13,16 +16,13 @@ interface UserStats {
   name: string;
 }
 
-type UserKey = 'user1' | 'user2';
-
-interface StatsType {
-  user1: UserStats;
-  user2: UserStats;
-}
-
-interface Inputs {
-  completed: string;
-  correct: string;
+interface ActivityLog {
+  id: number;
+  user_type: UserKey;
+  completed: number;
+  correct: number;
+  timestamp: string;
+  created_at: string;
 }
 
 interface DailyProgress {
@@ -33,11 +33,38 @@ interface DailyProgress {
   user2Correct: number;
 }
 
+interface AppState {
+  stats: {
+    user1: UserStats;
+    user2: UserStats;
+  };
+  inputs: {
+    user1: { completed: string; correct: string };
+    user2: { completed: string; correct: string };
+  };
+  error: {
+    user1: string;
+    user2: string;
+  };
+  password: {
+    user1: string;
+    user2: string;
+  };
+  showPasswordInput: {
+    user1: boolean;
+    user2: boolean;
+  };
+  showInputs: {
+    user1: boolean;
+    user2: boolean;
+  };
+}
+
+// Utility functions
 const calculateAccuracy = (correct: number, total: number): string => {
   if (total === 0) return '0';
   return ((correct / total) * 100).toFixed(1);
 };
-
 
 const calculateMetrics = (stats: UserStats) => {
   const accuracy = parseFloat(calculateAccuracy(stats.correct, stats.completed));
@@ -51,34 +78,6 @@ const calculateMetrics = (stats: UserStats) => {
     questionsPerDay: stats.completed,
     effectiveScore: stats.correct
   };
-};
-
-interface Comparison {
-  diff: number;
-  leader: UserKey;
-  metric: string;
-  value: string;
-}
-
-interface ComparisonResult {
-  overallLeader: UserKey;
-  comparisons: {
-    accuracy: Comparison;
-    volume: Comparison;
-    points: Comparison;
-    effectiveScore: Comparison;
-  };
-  user1Metrics: ReturnType<typeof calculateMetrics>;
-  user2Metrics: ReturnType<typeof calculateMetrics>;
-}
-
-// Function to get current date in IST
-const getISTDate = () => {
-  const date = new Date();
-  // Convert to IST (UTC+5:30)
-  const istTime = date.getTime() + (5.5 * 60 * 60 * 1000);
-  const istDate = new Date(istTime);
-  return istDate.toISOString().split('T')[0];
 };
 
 const determineLeader = (
@@ -126,7 +125,47 @@ const determineLeader = (
   };
 };
 
-const StatsComparison = ({ stats }: { stats: StatsType }) => {
+// Add these type definitions
+interface Comparison {
+  diff: number;
+  leader: UserKey;
+  metric: string;
+  value: string;
+}
+
+interface ComparisonResult {
+  overallLeader: UserKey;
+  comparisons: {
+    accuracy: Comparison;
+    volume: Comparison;
+    points: Comparison;
+    effectiveScore: Comparison;
+  };
+  user1Metrics: ReturnType<typeof calculateMetrics>;
+  user2Metrics: ReturnType<typeof calculateMetrics>;
+}
+
+
+const getISTDate = () => {
+  const date = new Date();
+  const istTime = date.getTime() + (5.5 * 60 * 60 * 1000);
+  const istDate = new Date(istTime);
+  return istDate.toISOString().split('T')[0];
+};
+
+const formatDate = (timestamp: string): string => {
+  const date = new Date(timestamp);
+  return date.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+};
+
+// Stats comparison component
+const StatsComparison = ({ stats }: { stats: { user1: UserStats; user2: UserStats } }) => {
   const user1Metrics = calculateMetrics(stats.user1);
   const user2Metrics = calculateMetrics(stats.user2);
   const comparison = determineLeader(user1Metrics, user2Metrics);
@@ -231,157 +270,121 @@ const StatsComparison = ({ stats }: { stats: StatsType }) => {
   );
 };
 
-const calculateEfficiency = (completed: number, correct: number) => {
-  if (completed === 0) return 0;
-  // Base efficiency is the accuracy percentage
-  const accuracy = (correct / completed) * 100;
-  
-  // Add completion bonus (10% bonus for completing more than 200 questions)
-  const completionBonus = completed >= 200 ? 10 : 0;
-  
-  // Final efficiency score capped at 100
-  return Math.min(100, Math.round(accuracy + completionBonus));
+// Activity Log Component
+const ActivityLogSection = ({ logs, userNames }: { 
+  logs: ActivityLog[],
+  userNames: { user1: string; user2: string; }
+}) => {
+  return (
+    <div className="space-y-3 p-4 rounded-lg bg-white shadow-sm">
+      <div className="font-medium flex items-center gap-2">
+        <Clock className="w-4 h-4" />
+        Recent Activity
+      </div>
+      <div className="space-y-2">
+        {logs.map((log) => (
+          <div key={log.id} className="text-sm p-2 bg-gray-50 rounded-md">
+            <div className="flex justify-between">
+              <span className="font-medium">
+                {log.user_type === 'user1' ? userNames.user1 : userNames.user2}
+              </span>
+              <span className="text-gray-500">{formatDate(log.timestamp)}</span>
+            </div>
+            <div className="text-gray-600">
+              Completed: {log.completed} | Correct: {log.correct} | 
+              Accuracy: {calculateAccuracy(log.correct, log.completed)}%
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 };
 
+// Main component
 const QBankTracker = () => {
-  const [stats, setStats] = useState<{ user1: UserStats; user2: UserStats }>({
-    user1: { completed: 0, correct: 0, name: "Aarsh" },
-    user2: { completed: 0, correct: 0, name: "Aman" },
-  });
-
-  const [dailyProgress, setDailyProgress] = useState<DailyProgress[]>([]);  
-
-  const [inputs, setInputs] = useState<{ user1: Inputs; user2: Inputs }>({
-    user1: { completed: '', correct: '' },
-    user2: { completed: '', correct: '' },
-  });
-
-  const [mode, setMode] = useState<{ [key in UserKey]: 'view' | 'add' | 'edit' }>({
-    user1: 'view',
-    user2: 'view',
-  });
-
-  const [error, setError] = useState<{ user1: string; user2: string }>({
-    user1: '',
-    user2: '',
-  });
-
-  // Password function
-  const [passwordInput, setPasswordInput] = useState<{ [key in UserKey]: string}>({
-    user1: '',
-    user2: '',
-  })
-  const [showPasswordInput, setShowPasswordInput] = useState<{ [key in UserKey]: boolean }>({
-    user1: false,
-    user2: false,
-  });
-  const [passwordError, setPasswordError] = useState<{ [key in UserKey]: string }>({
-    user1: '',
-    user2: '',
-  });
-
-  // Password validation
-  const verifyPassword = (user: UserKey, password: string) => {
-    const correctPasswords = {
-      user1: '9696', 
-      user2: '6969'  
-    };
-
-    if (password === correctPasswords[user]) {
-      setPasswordError(prev => ({ ...prev, [user]: '' }));
-      setShowPasswordInput(prev => ({ ...prev, [user]: false }));
-      return true;
+  const [state, setState] = useState<AppState>({
+    stats: {
+      user1: { completed: 0, correct: 0, name: "Aarsh" },
+      user2: { completed: 0, correct: 0, name: "Aman" }
+    },
+    inputs: {
+      user1: { completed: '', correct: '' },
+      user2: { completed: '', correct: '' }
+    },
+    error: {
+      user1: '',
+      user2: ''
+    },
+    password: {
+      user1: '',
+      user2: ''
+    },
+    showPasswordInput: {
+      user1: false,
+      user2: false
+    },
+    showInputs: {
+      user1: false,
+      user2: false
     }
-    
-    setPasswordError(prev => ({ ...prev, [user]: 'Incorrect password' }));
-    return false;
+  });
+
+  const [dailyProgress, setDailyProgress] = useState<DailyProgress[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+
+  // Password verification
+  const verifyPassword = (user: UserKey, password: string): boolean => {
+    const passwords = { user1: '9696', user2: '6969' };
+    return password === passwords[user];
   };
 
-  // Modified function to handle mode changes with password verification
-  const handleModeChange = (user: UserKey, newMode: 'view' | 'add' | 'edit') => {
-    if (newMode === 'view') {
-      setMode(prev => ({ ...prev, [user]: 'view' }));
-      setShowPasswordInput(prev => ({ ...prev, [user]: false }));
-      setPasswordInput(prev => ({ ...prev, [user]: '' }));
-      setPasswordError(prev => ({ ...prev, [user]: '' }));
-      if (newMode === 'view' && mode[user] === 'edit') {
-        setInputs(prev => ({
-          ...prev,
-          [user]: { completed: '', correct: '' },
-        }));
-      }
-    } else {
-      setShowPasswordInput(prev => ({ ...prev, [user]: true }));
-      if (newMode === 'edit') {
-        setInputs(prev => ({
-          ...prev,
-          [user]: {
-            completed: stats[user].completed.toString(),
-            correct: stats[user].correct.toString(),
-          },
-        }));
-      }
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-    fetchDailyProgress();
-  }, []);
-
+  // Data fetching functions
   const fetchData = async () => {
     try {
-      const { data, error: fetchError } = await supabase
-        .from('qbank_stats')
-        .select('*')
-        .eq('id', 'main')
-        .single();
+      const [statsResponse, logsResponse] = await Promise.all([
+        supabase
+          .from('qbank_stats')
+          .select('*')
+          .eq('id', 'main')
+          .single(),
+        supabase
+          .from('activity_logs')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(10)
+      ]);
 
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        throw fetchError;
+      if (statsResponse.error && statsResponse.error.code !== 'PGRST116') {
+        throw statsResponse.error;
       }
 
-      if (data?.stats) {
-        setStats(data.stats);
+      if (logsResponse.error) {
+        throw logsResponse.error;
+      }
+
+      if (statsResponse.data?.stats) {
+        setState(prev => ({ ...prev, stats: statsResponse.data.stats }));
+      }
+
+      if (logsResponse.data) {
+        setActivityLogs(logsResponse.data);
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);
     }
   };
 
-
   const fetchDailyProgress = async () => {
     try {
-      console.log('Fetching daily progress...'); // Debug log
-      const { data: tableData, error: tableError } = await supabase
+      const { data, error } = await supabase
         .from('daily_progress')
         .select('*')
-        .limit(1);
+        .order('date', { ascending: true });
 
-      if (tableError) {
-        console.error('Error accessing daily_progress table:', tableError);
-        return;
-      }
-
-      const { data, error: fetchError } = await supabase
-      .from('daily_progress')
-      .select('date, user1_completed, user1_correct, user2_completed, user2_correct')
-      .order('date', { ascending: true });
- 
-      if (fetchError) {
-        console.error('Supabase error:', fetchError); // Detailed error logging
-        return;
-      }
-
-      console.log('Raw daily progress data:', data); // Debug log
-
-      if (!data || data.length === 0) {
-        console.log('No daily progress data found in the table');
-        return;
-      }
-        
-      // Transform the snake_case data to camelCase for the component
-      const transformedData = data.map(entry => ({
+      if (error) throw error;
+      
+      const transformedData = data?.map(entry => ({
         date: entry.date,
         user1Completed: entry.user1_completed,
         user1Correct: entry.user1_correct,
@@ -389,188 +392,154 @@ const QBankTracker = () => {
         user2Correct: entry.user2_correct
       }));
 
-        console.log('Transformed daily progress data:', transformedData); // Debug log
-        setDailyProgress(transformedData);
-      } catch (error) {
+      setDailyProgress(transformedData || []);
+    } catch (error) {
       console.error('Failed to fetch daily progress:', error);
     }
   };
 
+  // Update functions
   const updateDailyProgress = async (user: UserKey, completed: number, correct: number) => {
-    const today = getISTDate(); // Use IST date instead of local date
-    
-    
+    const today = getISTDate();
     try {
-      console.log('Updating daily progress for:', { user, completed, correct, today }); // Debug log
-      
-      // First, try to get today's entry
-      const { data: existingData, error: fetchError } = await supabase
+      const { data: existingData } = await supabase
         .from('daily_progress')
         .select('*')
         .eq('date', today)
         .maybeSingle();
 
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        console.error('Error fetching existing entry:', fetchError);
-        throw fetchError;
-      }
-
       const userCompletedField = `${user}_completed`;
       const userCorrectField = `${user}_correct`;
 
       if (existingData) {
-        console.log('Existing entry found:', existingData); // Debug log
-        
-        // Update existing entry using snake_case column names
-        const updateData = {
-          [userCompletedField]: (existingData[userCompletedField] || 0) + completed,
-          [userCorrectField]: (existingData[userCorrectField] || 0) + correct
-        };
-
-        const { error: updateError } = await supabase
+        await supabase
           .from('daily_progress')
-          .update(updateData)
+          .update({
+            [userCompletedField]: (existingData[userCompletedField] || 0) + completed,
+            [userCorrectField]: (existingData[userCorrectField] || 0) + correct
+          })
           .eq('date', today);
-
-        if (updateError) {
-          console.error('Error updating entry:', updateError);
-          throw updateError;
-        }
       } else {
-        console.log('Creating new entry for today'); // Debug log
-        
-        // Create new entry using snake_case column names
-        const newEntry = {
-          date: today,
-          user1_completed: user === 'user1' ? completed : 0,
-          user1_correct: user === 'user1' ? correct : 0,
-          user2_completed: user === 'user2' ? completed : 0,
-          user2_correct: user === 'user2' ? correct : 0
-        };
-
-        const { error: insertError } = await supabase
+        await supabase
           .from('daily_progress')
-          .insert(newEntry);
-
-        if (insertError) {
-          console.error('Error inserting new entry:', insertError);
-          throw insertError;
-        }
+          .insert({
+            date: today,
+            user1_completed: user === 'user1' ? completed : 0,
+            user1_correct: user === 'user1' ? correct : 0,
+            user2_completed: user === 'user2' ? completed : 0,
+            user2_correct: user === 'user2' ? correct : 0
+          });
       }
 
-      // Fetch updated data
       await fetchDailyProgress();
-      
     } catch (error) {
-      console.error('Error in updateDailyProgress:', error);
+      console.error('Error updating daily progress:', error);
     }
   };
 
-  const handleInputChange = (
-    user: UserKey,
-    field: 'completed' | 'correct',
-    value: string
-  ) => {
-    setInputs(prev => ({
-      ...prev,
-      [user]: {
-        ...prev[user],
-        [field]: value
-      }
-    }));
-    setError(prev => ({ ...prev, [user]: '' }));
+  const handlePasswordSubmit = (user: UserKey) => {
+    if (verifyPassword(user, state.password[user])) {
+      setState(prev => ({
+        ...prev,
+        showPasswordInput: { ...prev.showPasswordInput, [user]: false },
+        showInputs: { ...prev.showInputs, [user]: true },
+        password: { ...prev.password, [user]: '' },
+        error: { ...prev.error, [user]: '' }
+      }));
+    } else {
+      setState(prev => ({
+        ...prev,
+        error: { ...prev.error, [user]: 'Incorrect password' }
+      }));
+    }
   };
 
   const handleSubmit = async (user: UserKey) => {
-
-    if (!verifyPassword(user, passwordInput[user])) {
-      return;
-    }
-
-    const newCompleted = parseInt(inputs[user].completed) || 0;
-    const newCorrect = parseInt(inputs[user].correct) || 0;
+    const newCompleted = parseInt(state.inputs[user].completed) || 0;
+    const newCorrect = parseInt(state.inputs[user].correct) || 0;
 
     // Validation
-    if (newCompleted === 0) {
-      setError(prev => ({
+    if (newCompleted === 0 || newCorrect > newCompleted || newCompleted < 0 || newCorrect < 0) {
+      setState(prev => ({
         ...prev,
-        [user]: "Please enter the number of completed questions"
-      }));
-      return;
-    }
-
-    if (newCorrect > newCompleted) {
-      setError(prev => ({
-        ...prev,
-        [user]: "Correct answers can't exceed total questions"
-      }));
-      return;
-    }
-
-    if (newCompleted < 0 || newCorrect < 0) {
-      setError(prev => ({
-        ...prev,
-        [user]: "Values cannot be negative"
+        error: { ...prev.error, [user]: "Invalid input values" }
       }));
       return;
     }
 
     try {
-      console.log('Starting handleSubmit for:', user); // Debug log
-
-      // First update the total stats
       const updatedStats = {
-        ...stats,
+        ...state.stats,
         [user]: {
-          ...stats[user],
-          completed: mode[user] === 'edit' ? newCompleted : stats[user].completed + newCompleted,
-          correct: mode[user] === 'edit' ? newCorrect : stats[user].correct + newCorrect,
+          ...state.stats[user],
+          completed: state.stats[user].completed + newCompleted,
+          correct: state.stats[user].correct + newCorrect,
         },
       };
 
-      console.log('Updating stats with:', updatedStats); // Debug log
+      // Create the activity log entry
+      const { data: logData, error: logError } = await supabase
+        .from('activity_logs')
+        .insert({
+          user_type: user,
+          completed: newCompleted,
+          correct: newCorrect,
+          timestamp: new Date().toISOString()
+        })
+        .select()
+        .single();
 
-      const { error: statsError } = await supabase
-        .from('qbank_stats')
-        .upsert({
-          id: 'main',
-          stats: updatedStats,
-          last_updated: new Date().toISOString(),
-        });
+      if (logError) throw logError;
 
-      if (statsError) throw statsError;
+      // Update stats and daily progress
+      const [statsResult, progressResult] = await Promise.all([
+        supabase
+          .from('qbank_stats')
+          .upsert({
+            id: 'main',
+            stats: updatedStats,
+            last_updated: new Date().toISOString(),
+          }),
+        updateDailyProgress(user, newCompleted, newCorrect)
+      ]);
 
-      console.log('Stats updated successfully, mode is:', mode[user]);
+      if (statsResult.error) throw statsResult.error;
 
-      // Only update daily progress when adding new progress, not when editing
-      if (mode[user] === 'add') {
-        console.log('Calling updateDailyProgress with:', {
-          user,
-          newCompleted,
-          newCorrect
-        });
-        await updateDailyProgress(user, newCompleted, newCorrect);
+      // Update local state
+      setState(prev => ({
+        ...prev,
+        stats: updatedStats,
+        inputs: { ...prev.inputs, [user]: { completed: '', correct: '' } },
+        showInputs: { ...prev.showInputs, [user]: false }
+      }));
+
+      // Update activity logs state with the new entry
+      if (logData) {
+        setActivityLogs(prev => [logData, ...prev.slice(0, 9)]); // Keep only the last 10 entries
       }
 
-      setStats(updatedStats);
-      setInputs(prev => ({
-        ...prev,
-        [user]: { completed: '', correct: '' },
-      }));
-      setMode(prev => ({
-        ...prev,
-        [user]: 'view',
-      }));
+      // Refresh data to ensure consistency
+      await fetchData();
 
     } catch (error) {
       console.error('Failed to update data:', error);
+      setState(prev => ({
+        ...prev,
+        error: { ...prev.error, [user]: "Failed to update progress" }
+      }));
     }
   };
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchData();
+    fetchDailyProgress();
+  }, []);
 
   return (
     <Card className="w-full max-w-xl bg-gradient-to-br from-slate-50 to-slate-100 shadow-lg">
       <CardHeader className="space-y-1">
-        <div className = "flex justify-center">
+        <div className="flex justify-center">
           <img src={imgSrc} alt="Marrow Logo" className="w-12 h-12" />
         </div>
         <CardTitle className="text-2xl text-center font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
@@ -578,74 +547,62 @@ const QBankTracker = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <StatsComparison stats={stats} />
+        <StatsComparison stats={state.stats} />
         
         {(['user1', 'user2'] as UserKey[]).map((user) => (
           <div key={user} className="space-y-3 p-4 rounded-lg bg-white shadow-sm">
             <div className="flex flex-wrap gap-3">
               <div className="flex items-center gap-2">
                 <Target className="text-blue-500" size={20} />
-                <span className="font-medium">{stats[user].name}</span>
+                <span className="font-medium">{state.stats[user].name}</span>
               </div>
-              <div className="flex flex-wrap ml-auto gap-2 w-full sm:w-auto">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex-1 sm:flex-initial"
-                  onClick={() => handleModeChange(user, mode[user] === 'add' ? 'view' : 'add')}
-                >
-                  <Plus size={16} className="mr-1" />
-                  Add Progress
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex-1 sm:flex-initial"
-                  onClick={() => handleModeChange(user, mode[user] === 'add' ? 'view' : 'add')}
-                >
-                  <Edit2 size={16} className="mr-1" />
-                  Edit Stats
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto"
+                onClick={() => setState(prev => ({
+                  ...prev,
+                  showPasswordInput: { ...prev.showPasswordInput, [user]: true }
+                }))}
+              >
+                <Plus size={16} className="mr-1" />
+                Add Progress
+              </Button>
             </div>
 
-            
-            {showPasswordInput[user] && (
+            {state.showPasswordInput[user] && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Lock size={16} className="text-gray-500" />
                   <Input
                     type="password"
-                    value={passwordInput[user]}
-                    onChange={(e) => {
-                      setPasswordInput(prev => ({ ...prev, [user]: e.target.value }));
-                      setPasswordError(prev => ({ ...prev, [user]: '' }));
-                    }}
+                    value={state.password[user]}
+                    onChange={(e) => setState(prev => ({
+                      ...prev,
+                      password: { ...prev.password, [user]: e.target.value },
+                      error: { ...prev.error, [user]: '' }
+                    }))}
                     placeholder="Enter password"
                     className="flex-1"
                   />
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => {
-                      setShowPasswordInput(prev => ({ ...prev, [user]: false }));
-                      setPasswordInput(prev => ({ ...prev, [user]: '' }));
-                      setPasswordError(prev => ({ ...prev, [user]: '' }));
-                      setMode(prev => ({ ...prev, [user]: 'view' }));
-                    }}
+                    onClick={() => setState(prev => ({
+                      ...prev,
+                      showPasswordInput: { ...prev.showPasswordInput, [user]: false },
+                      password: { ...prev.password, [user]: '' },
+                      error: { ...prev.error, [user]: '' }
+                    }))}
                   >
                     <XCircle size={16} />
                   </Button>
                 </div>
-                {passwordError[user] && (
-                  <div className="text-red-500 text-sm">{passwordError[user]}</div>
+                {state.error[user] && (
+                  <div className="text-red-500 text-sm">{state.error[user]}</div>
                 )}
                 <Button 
-                  onClick={() => {
-                    if (verifyPassword(user, passwordInput[user])) {
-                      setMode(prev => ({ ...prev, [user]: showPasswordInput[user] ? 'add' : 'edit' }));
-                    }
-                  }}
+                  onClick={() => handlePasswordSubmit(user)}
                   className="w-full"
                 >
                   Verify Password
@@ -653,68 +610,91 @@ const QBankTracker = () => {
               </div>
             )}
 
-            {mode[user] !== 'view' && !showPasswordInput[user] && (
+            {state.showInputs[user] && (
               <div className="space-y-2">
                 <Input
                   type="number"
-                  value={inputs[user].completed}
-                  onChange={(e) => handleInputChange(user, 'completed', e.target.value)}
-                  placeholder={mode[user] === 'add' ? "Questions completed in this session" : "Total questions completed"}
+                  value={state.inputs[user].completed}
+                  onChange={(e) => setState(prev => ({
+                    ...prev,
+                    inputs: {
+                      ...prev.inputs,
+                      [user]: { ...prev.inputs[user], completed: e.target.value }
+                    },
+                    error: { ...prev.error, [user]: '' }
+                  }))}
+                  placeholder="Questions completed in this session"
                   className="w-full"
                 />
                 <Input
                   type="number"
-                  value={inputs[user].correct}
-                  onChange={(e) => handleInputChange(user, 'correct', e.target.value)}
-                  placeholder={mode[user] === 'add' ? "Correct answers in this session" : "Total correct answers"}
+                  value={state.inputs[user].correct}
+                  onChange={(e) => setState(prev => ({
+                    ...prev,
+                    inputs: {
+                      ...prev.inputs,
+                      [user]: { ...prev.inputs[user], correct: e.target.value }
+                    },
+                    error: { ...prev.error, [user]: '' }
+                  }))}
+                  placeholder="Correct answers in this session"
                   className="w-full"
                 />
-                {error[user] && (
-                  <div className="text-red-500 text-sm">{error[user]}</div>
+                {state.error[user] && (
+                  <div className="text-red-500 text-sm">{state.error[user]}</div>
                 )}
                 <Button 
                   onClick={() => handleSubmit(user)}
                   className="w-full"
                 >
-                  {mode[user] === 'add' ? 'Add Progress' : 'Update Stats'}
+                  Add Progress
                 </Button>
               </div>
             )}
             
-            {mode[user] === 'view' && !showPasswordInput[user] && (
+            {!state.showInputs[user] && !state.showPasswordInput[user] && (
               <div className="space-y-1">
-                <div>Total Questions: {stats[user].completed}</div>
-                <div>Correct: {stats[user].correct}</div>
+                <div>Total Questions: {state.stats[user].completed}</div>
+                <div>Correct: {state.stats[user].correct}</div>
                 <div className="font-semibold text-lg">
-                  Accuracy: {calculateAccuracy(stats[user].correct, stats[user].completed)}%
+                  Accuracy: {calculateAccuracy(state.stats[user].correct, state.stats[user].completed)}%
                 </div>
               </div>
             )}
           </div>
         ))}
+
+        {activityLogs.length > 0 && (
+          <ActivityLogSection 
+            logs={activityLogs}
+            userNames={{
+              user1: state.stats.user1.name,
+              user2: state.stats.user2.name
+            }}
+          />
+        )}
+
         {dailyProgress.length > 0 && (
           <ProgressDashboard 
             dailyData={dailyProgress.map(day => ({
               date: day.date,
               user1Data: {
-          date: day.date,
-          completed: day.user1Completed,
-          correct: day.user1Correct,
-          accuracy: (day.user1Correct / day.user1Completed * 100) || 0,
-          goalProgress: (day.user1Correct / day.user1Completed * 100) || 0,
-          efficiency: calculateEfficiency(day.user1Completed, day.user1Correct)
+                date: day.date,
+                completed: day.user1Completed,
+                correct: day.user1Correct,
+                accuracy: (day.user1Correct / day.user1Completed * 100) || 0,
+                goalProgress: (day.user1Correct / day.user1Completed * 100) || 0,
               },
               user2Data: {
-          date: day.date,
-          completed: day.user2Completed,
-          correct: day.user2Correct,
-          accuracy: (day.user2Correct / day.user2Completed * 100) || 0,
-          goalProgress: (day.user2Correct / day.user2Completed * 100) || 0,
-          efficiency: calculateEfficiency(day.user2Completed, day.user2Correct)
+                date: day.date,
+                completed: day.user2Completed,
+                correct: day.user2Correct,
+                accuracy: (day.user2Correct / day.user2Completed * 100) || 0,
+                goalProgress: (day.user2Correct / day.user2Completed * 100) || 0,
               }
             }))}
-            user1Name={stats.user1.name}
-            user2Name={stats.user2.name}
+            user1Name={state.stats.user1.name}
+            user2Name={state.stats.user2.name}
             getDate={getISTDate}
           />
         )}

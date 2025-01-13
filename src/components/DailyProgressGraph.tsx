@@ -59,66 +59,69 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
   const stats = useMemo(() => {
     const calculateUserStats = (userData: UserProgress[]) => {
       if (!userData?.length) return { 
-      currentStreak: 0, 
-      dailyAverage: 0, 
-      todayProgress: 0,
-      studyConsistency: 0
+        currentStreak: 0, 
+        dailyAverage: 0, 
+        todayProgress: 0,
+        studyConsistency: 0
       };
-
+    
       let currentStreak = 0;
       const now = new Date(getDate());
       const sortedData = [...userData].sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
+        new Date(b.date).getTime() - new Date(a.date).getTime()
       );
       
       // Calculate streak excluding Sundays
       for (const day of sortedData) {
-      const dayDate = new Date(day.date);
-      if (dayDate.getDay() === 0) continue; // Skip Sundays
-      
-      if (dayDate.toDateString() === now.toDateString() && day.completed < DAILY_TARGET) {
-        currentStreak = sortedData.length > 1 ? currentStreak : 0;
-        continue;
+        const dayDate = new Date(day.date);
+        if (dayDate.getDay() === 0) continue; // Skip Sundays
+        
+        if (dayDate.toDateString() === now.toDateString() && day.completed < DAILY_TARGET) {
+          currentStreak = sortedData.length > 1 ? currentStreak : 0;
+          continue;
+        }
+        if (day.completed >= DAILY_TARGET) {
+          currentStreak++;
+        } else {
+          break;
+        }
       }
-      if (day.completed >= DAILY_TARGET) {
-        currentStreak++;
-      } else {
-        break;
-      }
-      }
-
+    
       // Calculate daily average excluding Sundays
       const nonSundayData = userData.filter(day => new Date(day.date).getDay() !== 0);
       const dailyAverage = nonSundayData.length > 0
-      ? Math.round(
-        nonSundayData.reduce((sum, day) => sum + day.completed, 0) / nonSundayData.length
+        ? Math.round(
+          nonSundayData.reduce((sum, day) => sum + day.completed, 0) / nonSundayData.length
         )
-      : 0;
-
+        : 0;
+    
       const today = new Date().toISOString().split('T')[0];
       const todayData = userData.find(day => day.date === today);
       const todayProgress = todayData ? todayData.completed : 0;
       
-      // Get last 30 days excluding Sundays
+      // Get last 30 days excluding current day and Sundays
       const last30Days = userData
-      .filter(day => new Date(day.date).getDay() !== 0)
-      .slice(-30);
+        .filter(day => day.date !== today && new Date(day.date).getDay() !== 0)
+        .slice(-30);
+      
       let consistentDays = 0;
-
+    
       // Calculate study Consistency
       last30Days.forEach(day => {
-      const dailyAccuracy = day.completed > 0 ? (day.correct / day.completed) * 100 : 0;
-      // A day is considered consistent if:
-      // 1. At least 50% of daily target is completed
-      // 2. Accuracy is above MIN_ACCURACY_TARGET
-      if (day.completed >= DAILY_TARGET * 0.5 && dailyAccuracy >= MIN_ACCURACY_TARGET) {
-        consistentDays++;
-      }
+        const dailyAccuracy = day.completed > 0 ? (day.correct / day.completed) * 100 : 0;
+        // A day is considered consistent if:
+        // 1. At least 50% of daily target is completed
+        // 2. Accuracy is above MIN_ACCURACY_TARGET
+        if (day.completed >= DAILY_TARGET * 0.5 && dailyAccuracy >= MIN_ACCURACY_TARGET) {
+          consistentDays++;
+        }
       });
       
       // Calculate consistency score as percentage of days meeting both targets
-      const consistencyScore = Math.round((consistentDays / last30Days.length) * 100 * 10) / 10;
-
+      const consistencyScore = last30Days.length > 0 
+        ? Math.round((consistentDays / last30Days.length) * 100 * 10) / 10
+        : 0;
+    
       return { currentStreak, dailyAverage, todayProgress, studyConsistency: consistencyScore };
     };
 
@@ -225,20 +228,20 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
           {selectedUser === "both" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <MetricCard
-                title="Daily Average"
-                value={selectedStats.dailyAverage}
-                valueUnit="questions"
-                icon={<Calendar className="h-4 w-4" />}
-                tooltip="Average questions per day (excluding Sundays)"
-                iconColor="#a855f7"
+              title="Daily Average"
+              value={selectedStats.dailyAverage}
+              valueUnit="questions"
+              icon={<Calendar className="h-4 w-4" />}
+              tooltip="Average questions per day (excluding Sundays)"
+              iconColor="#a855f7"
               />
               <MetricCard
-                title="Study Consistency"
-                value={selectedStats.studyConsistency}
-                valueUnit="%"
-                icon={<Brain className="h-4 w-4" />}
-                tooltip="Days meeting targets (last 30 days, excluding Sundays)"
-                iconColor="#4ec9b0"
+              title="Study Consistency"
+              value={(stats.user1Stats.studyConsistency + stats.user2Stats.studyConsistency) / 2}
+              valueUnit="%"
+              icon={<Brain className="h-4 w-4" />}
+              tooltip="Average Consistency of both users (last 30 days, excluding Sundays)"
+              iconColor="#4ec9b0"
               />
             </div>
           ) : (
