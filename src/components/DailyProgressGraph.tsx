@@ -2,10 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Progress } from '@/components/ui/progress';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, ComposedChart } from 'recharts';
 import { Flame, Calendar, Brain } from 'lucide-react';
 import MetricCard from '@/components/ui/MetricCard';
+import EnhancedProgress from '@/components/ui/EnhancedProgress';
 
 interface UserProgress {
   date: string;
@@ -274,10 +274,10 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
           )}
   
           <div className="w-full mt-4">
-            <Progress value={progressPercentage} />
-            <p className="text-sm text-gray-500 mt-1">
-              {selectedStats.todayProgress} of {targetQuestions} questions completed today ({Math.round((selectedStats.todayProgress / targetQuestions) * 100)}%) 
-            </p>
+            <EnhancedProgress 
+            current={selectedStats.todayProgress} 
+            target={targetQuestions}
+            />
           </div>
   
           <div className="w-full mt-6">

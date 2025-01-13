@@ -79,6 +79,13 @@ const formatDate = (timestamp) => {
         hour12: true
     });
 };
+const isSameDate = (date1, date2) => {
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    return (d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate());
+};
 // Stats comparison component
 const StatsComparison = ({ stats }) => {
     const user1Metrics = calculateMetrics(stats.user1);
@@ -102,7 +109,18 @@ const StatsComparison = ({ stats }) => {
 };
 // Activity Log Component
 const ActivityLogSection = ({ logs, userNames }) => {
-    return (_jsxs("div", { className: "space-y-3 p-4 rounded-lg bg-white shadow-sm", children: [_jsxs("div", { className: "font-medium flex items-center gap-2", children: [_jsx(Clock, { className: "w-4 h-4" }), "Recent Activity"] }), _jsx("div", { className: "space-y-2", children: logs.map((log) => (_jsxs("div", { className: "text-sm p-2 bg-gray-50 rounded-md", children: [_jsxs("div", { className: "flex justify-between", children: [_jsx("span", { className: "font-medium", children: log.user_type === 'user1' ? userNames.user1 : userNames.user2 }), _jsx("span", { className: "text-gray-500", children: formatDate(log.timestamp) })] }), _jsxs("div", { className: "text-gray-600", children: ["Completed: ", log.completed, " | Correct: ", log.correct, " | Accuracy: ", calculateAccuracy(log.correct, log.completed), "%"] })] }, log.id))) })] }));
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const filteredLogs = logs.filter(log => isSameDate(log.timestamp, selectedDate));
+    const dailyTotals = filteredLogs.reduce((acc, log) => {
+        const userType = log.user_type;
+        if (!acc[userType]) {
+            acc[userType] = { completed: 0, correct: 0 };
+        }
+        acc[userType].completed += log.completed;
+        acc[userType].correct += log.correct;
+        return acc;
+    }, {});
+    return (_jsxs(Card, { className: "w-full max-w-2xl", children: [_jsxs("div", { className: "p-4 border-b space-y-3", children: [_jsxs("div", { className: "font-medium flex items-center gap-2", children: [_jsx(Clock, { className: "w-4 h-4" }), "Activity Log"] }), _jsx(Input, { type: "date", value: selectedDate, onChange: (e) => setSelectedDate(e.target.value), className: "w-full" }), Object.entries(dailyTotals).map(([userType, totals]) => (_jsxs("div", { className: "text-sm text-gray-600", children: [_jsx("span", { className: "font-medium", children: userType === 'user1' ? userNames.user1 : userNames.user2 }), " total: ", totals.completed, " completed, ", totals.correct, " correct", " (", calculateAccuracy(totals.correct, totals.completed), "% accuracy)"] }, userType)))] }), _jsx("div", { className: "max-h-64 overflow-y-auto", children: _jsx("div", { className: "p-4 space-y-2", children: filteredLogs.length > 0 ? (filteredLogs.map((log) => (_jsxs("div", { className: "text-sm p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors", children: [_jsxs("div", { className: "flex justify-between items-center", children: [_jsx("span", { className: "font-medium text-gray-900", children: log.user_type === 'user1' ? userNames.user1 : userNames.user2 }), _jsx("span", { className: "text-gray-500 text-xs", children: formatDate(log.timestamp) })] }), _jsxs("div", { className: "text-gray-600 mt-1", children: [_jsxs("span", { className: "inline-block mr-3", children: ["Completed: ", log.completed] }), _jsxs("span", { className: "inline-block mr-3", children: ["Correct: ", log.correct] }), _jsxs("span", { className: "inline-block", children: ["Accuracy: ", calculateAccuracy(log.correct, log.completed), "%"] })] })] }, log.id)))) : (_jsx("div", { className: "text-center text-gray-500 py-4", children: "No entries found for this date" })) }) })] }));
 };
 // Main component
 const QBankTracker = () => {
@@ -152,7 +170,6 @@ const QBankTracker = () => {
                     .from('activity_logs')
                     .select('*')
                     .order('created_at', { ascending: false })
-                    .limit(10)
             ]);
             if (statsResponse.error && statsResponse.error.code !== 'PGRST116') {
                 throw statsResponse.error;
@@ -345,10 +362,7 @@ const QBankTracker = () => {
                                                 [user]: { ...prev.inputs[user], correct: e.target.value }
                                             },
                                             error: { ...prev.error, [user]: '' }
-                                        })), placeholder: "Correct answers in this session", className: "w-full" }), state.error[user] && (_jsx("div", { className: "text-red-500 text-sm", children: state.error[user] })), _jsx(Button, { onClick: () => handleSubmit(user), className: "w-full", children: "Add Progress" })] })), !state.showInputs[user] && !state.showPasswordInput[user] && (_jsxs("div", { className: "space-y-1", children: [_jsxs("div", { children: ["Total Questions: ", state.stats[user].completed] }), _jsxs("div", { children: ["Correct: ", state.stats[user].correct] }), _jsxs("div", { className: "font-semibold text-lg", children: ["Accuracy: ", calculateAccuracy(state.stats[user].correct, state.stats[user].completed), "%"] })] }))] }, user))), activityLogs.length > 0 && (_jsx(ActivityLogSection, { logs: activityLogs, userNames: {
-                            user1: state.stats.user1.name,
-                            user2: state.stats.user2.name
-                        } })), dailyProgress.length > 0 && (_jsx(ProgressDashboard, { dailyData: dailyProgress.map(day => ({
+                                        })), placeholder: "Correct answers in this session", className: "w-full" }), state.error[user] && (_jsx("div", { className: "text-red-500 text-sm", children: state.error[user] })), _jsx(Button, { onClick: () => handleSubmit(user), className: "w-full", children: "Add Progress" })] })), !state.showInputs[user] && !state.showPasswordInput[user] && (_jsxs("div", { className: "space-y-1", children: [_jsxs("div", { children: ["Total Questions: ", state.stats[user].completed] }), _jsxs("div", { children: ["Correct: ", state.stats[user].correct] }), _jsxs("div", { className: "font-semibold text-lg", children: ["Accuracy: ", calculateAccuracy(state.stats[user].correct, state.stats[user].completed), "%"] })] }))] }, user))), dailyProgress.length > 0 && (_jsx(ProgressDashboard, { dailyData: dailyProgress.map(day => ({
                             date: day.date,
                             user1Data: {
                                 date: day.date,
@@ -364,6 +378,9 @@ const QBankTracker = () => {
                                 accuracy: (day.user2Correct / day.user2Completed * 100) || 0,
                                 goalProgress: (day.user2Correct / day.user2Completed * 100) || 0,
                             }
-                        })), user1Name: state.stats.user1.name, user2Name: state.stats.user2.name, getDate: getISTDate }))] })] }));
+                        })), user1Name: state.stats.user1.name, user2Name: state.stats.user2.name, getDate: getISTDate })), activityLogs.length > 0 && (_jsx(ActivityLogSection, { logs: activityLogs, userNames: {
+                            user1: state.stats.user1.name,
+                            user2: state.stats.user2.name
+                        } }))] })] }));
 };
 export default QBankTracker;
