@@ -153,10 +153,24 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
   };
 
   const processedData = useMemo(() => {
-    return filteredData.map(data => ({
-      ...data,
-      processedData: calculateGoalProgress(data)
-    }));
+    return filteredData.map(data => {
+      const baseProcessed = calculateGoalProgress(data);
+      return {
+        ...data,
+        // Keep the combined stats for accuracy calculation
+        processedData: baseProcessed,
+        // Add separate values for user1 and user2
+        user1Completed: data.user1Data.completed,
+        user2Completed: data.user2Data.completed,
+        // Add separate accuracy values if needed
+        user1Accuracy: data.user1Data.completed > 0 
+          ? Math.round((data.user1Data.correct / data.user1Data.completed) * 100 * 10) / 10 
+          : 0,
+        user2Accuracy: data.user2Data.completed > 0 
+          ? Math.round((data.user2Data.correct / data.user2Data.completed) * 100 * 10) / 10 
+          : 0
+      };
+    });
   }, [filteredData, selectedUser]);
 
   const trendData = useMemo(() => {
@@ -330,20 +344,36 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
                       return [value, name];
                     }}
                     />
-                    <Bar
-                    yAxisId="left"
-                    dataKey="processedData.completed"
-                    fill="#93c5fd"
-                    name="Questions Completed"
-                    opacity={0.3}
-                    />
-                    <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="processedData.accuracy"
-                    stroke="#7c3aed"
-                    name="Accuracy"
-                    />
+                    {selectedUser === 'both' ? (
+                    <>
+                      <Bar yAxisId="left" stackId="users" dataKey="user1Completed" fill="#93c5fd" name={user1Name} opacity={0.3}/>
+                      <Bar yAxisId="left" stackId="users" dataKey="user2Completed" fill="#818cf8" name={user2Name} opacity={0.3}/>
+                      <Line
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="processedData.accuracy"
+                        stroke="#7c3aed"
+                        name="Combined Accuracy"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <Bar
+                        yAxisId="left"
+                        dataKey="processedData.completed"
+                        fill="#93c5fd"
+                        name="Questions Completed"
+                        opacity={0.3}
+                      />
+                      <Line
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="processedData.accuracy"
+                        stroke="#7c3aed"
+                        name="Accuracy"
+                      />
+                    </>
+                  )}
                   </ComposedChart>
                   </ResponsiveContainer>
                 </div>

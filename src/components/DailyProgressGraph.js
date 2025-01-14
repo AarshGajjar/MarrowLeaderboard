@@ -1,4 +1,4 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -113,10 +113,24 @@ const ProgressDashboard = ({ dailyData = [], user1Name, user2Name, getDate = () 
         };
     };
     const processedData = useMemo(() => {
-        return filteredData.map(data => ({
-            ...data,
-            processedData: calculateGoalProgress(data)
-        }));
+        return filteredData.map(data => {
+            const baseProcessed = calculateGoalProgress(data);
+            return {
+                ...data,
+                // Keep the combined stats for accuracy calculation
+                processedData: baseProcessed,
+                // Add separate values for user1 and user2
+                user1Completed: data.user1Data.completed,
+                user2Completed: data.user2Data.completed,
+                // Add separate accuracy values if needed
+                user1Accuracy: data.user1Data.completed > 0
+                    ? Math.round((data.user1Data.correct / data.user1Data.completed) * 100 * 10) / 10
+                    : 0,
+                user2Accuracy: data.user2Data.completed > 0
+                    ? Math.round((data.user2Data.correct / data.user2Data.completed) * 100 * 10) / 10
+                    : 0
+            };
+        });
     }, [filteredData, selectedUser]);
     const trendData = useMemo(() => {
         const windowSize = 7;
@@ -161,7 +175,7 @@ const ProgressDashboard = ({ dailyData = [], user1Name, user2Name, getDate = () 
                                                                         return [`${value}%`, name];
                                                                     }
                                                                     return [value, name];
-                                                                } }), _jsx(Bar, { yAxisId: "left", dataKey: "processedData.completed", fill: "#93c5fd", name: "Questions Completed", opacity: 0.3 }), _jsx(Line, { yAxisId: "right", type: "monotone", dataKey: "processedData.accuracy", stroke: "#7c3aed", name: "Accuracy" })] }) }) })] }), _jsxs(TabsContent, { value: "trends", children: [_jsx("div", { className: "mb-4", children: _jsxs(Select, { value: dateRange, onValueChange: setDateRange, children: [_jsx(SelectTrigger, { className: "w-40", children: _jsx(SelectValue, { placeholder: "Date Range" }) }), _jsxs(SelectContent, { children: [_jsx(SelectItem, { value: "week", children: "Last Week" }), _jsx(SelectItem, { value: "month", children: "Last Month" }), _jsx(SelectItem, { value: "all", children: "All Time" })] })] }) }), _jsx("div", { className: "w-full aspect-[4/3] sm:aspect-[16/9]", children: _jsx(ResponsiveContainer, { width: "100%", height: "100%", children: _jsxs(LineChart, { data: trendData, margin: { top: 10, right: 10, bottom: 20, left: 10 }, children: [_jsx(CartesianGrid, { strokeDasharray: "3 3", opacity: 0.3 }), _jsx(XAxis, { dataKey: "date", tick: { fontSize: 12 }, tickMargin: 10 }), _jsx(YAxis, { yAxisId: "left", label: { value: 'Avg. Questions', angle: -90, position: 'insideLeft', offset: 0 }, domain: [0, 'auto'], tick: { fontSize: 12 } }), _jsx(YAxis, { yAxisId: "right", orientation: "right", label: { value: 'Avg. Accuracy %', angle: 90, position: 'insideRight', offset: 0 }, domain: [0, 100], tick: { fontSize: 12 } }), _jsx(Tooltip, { formatter: (value, name) => {
+                                                                } }), selectedUser === 'both' ? (_jsxs(_Fragment, { children: [_jsx(Bar, { yAxisId: "left", stackId: "users", dataKey: "user1Completed", fill: "#93c5fd", name: user1Name, opacity: 0.3 }), _jsx(Bar, { yAxisId: "left", stackId: "users", dataKey: "user2Completed", fill: "#818cf8", name: user2Name, opacity: 0.3 }), _jsx(Line, { yAxisId: "right", type: "monotone", dataKey: "processedData.accuracy", stroke: "#7c3aed", name: "Combined Accuracy" })] })) : (_jsxs(_Fragment, { children: [_jsx(Bar, { yAxisId: "left", dataKey: "processedData.completed", fill: "#93c5fd", name: "Questions Completed", opacity: 0.3 }), _jsx(Line, { yAxisId: "right", type: "monotone", dataKey: "processedData.accuracy", stroke: "#7c3aed", name: "Accuracy" })] }))] }) }) })] }), _jsxs(TabsContent, { value: "trends", children: [_jsx("div", { className: "mb-4", children: _jsxs(Select, { value: dateRange, onValueChange: setDateRange, children: [_jsx(SelectTrigger, { className: "w-40", children: _jsx(SelectValue, { placeholder: "Date Range" }) }), _jsxs(SelectContent, { children: [_jsx(SelectItem, { value: "week", children: "Last Week" }), _jsx(SelectItem, { value: "month", children: "Last Month" }), _jsx(SelectItem, { value: "all", children: "All Time" })] })] }) }), _jsx("div", { className: "w-full aspect-[4/3] sm:aspect-[16/9]", children: _jsx(ResponsiveContainer, { width: "100%", height: "100%", children: _jsxs(LineChart, { data: trendData, margin: { top: 10, right: 10, bottom: 20, left: 10 }, children: [_jsx(CartesianGrid, { strokeDasharray: "3 3", opacity: 0.3 }), _jsx(XAxis, { dataKey: "date", tick: { fontSize: 12 }, tickMargin: 10 }), _jsx(YAxis, { yAxisId: "left", label: { value: 'Avg. Questions', angle: -90, position: 'insideLeft', offset: 0 }, domain: [0, 'auto'], tick: { fontSize: 12 } }), _jsx(YAxis, { yAxisId: "right", orientation: "right", label: { value: 'Avg. Accuracy %', angle: 90, position: 'insideRight', offset: 0 }, domain: [0, 100], tick: { fontSize: 12 } }), _jsx(Tooltip, { formatter: (value, name) => {
                                                                     if (name === "7-day Avg. Accuracy") {
                                                                         return [`${value}%`, name];
                                                                     }
