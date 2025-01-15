@@ -59,12 +59,14 @@ const ProgressDashboard = ({ dailyData = [], user1Name, user2Name, getDate = () 
                     break;
                 }
             }
-            // Calculate daily average excluding Sundays
-            const nonSundayData = userData.filter(day => new Date(day.date).getDay() !== 0);
+            const today = new Date(getDate()).toISOString().split('T')[0];
+            // Calculate daily average excluding Sundays AND today
+            const nonSundayData = userData.filter(day => new Date(day.date).getDay() !== 0 && // Exclude Sundays
+                day.date !== today // Exclude today
+            );
             const dailyAverage = nonSundayData.length > 0
                 ? Math.round(nonSundayData.reduce((sum, day) => sum + day.completed, 0) / nonSundayData.length)
                 : 0;
-            const today = new Date().toISOString().split('T')[0];
             const todayData = userData.find(day => day.date === today);
             const todayProgress = todayData ? todayData.completed : 0;
             // Get last 30 days excluding current day and Sundays
@@ -75,14 +77,10 @@ const ProgressDashboard = ({ dailyData = [], user1Name, user2Name, getDate = () 
             // Calculate study Consistency
             last30Days.forEach(day => {
                 const dailyAccuracy = day.completed > 0 ? (day.correct / day.completed) * 100 : 0;
-                // A day is considered consistent if:
-                // 1. At least 50% of daily target is completed
-                // 2. Accuracy is above MIN_ACCURACY_TARGET
                 if (day.completed >= DAILY_TARGET * 0.5 && dailyAccuracy >= MIN_ACCURACY_TARGET) {
                     consistentDays++;
                 }
             });
-            // Calculate consistency score as percentage of days meeting both targets
             const consistencyScore = last30Days.length > 0
                 ? Math.round((consistentDays / last30Days.length) * 100 * 10) / 10
                 : 0;
