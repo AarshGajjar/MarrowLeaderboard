@@ -58,6 +58,7 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
 
   const stats = useMemo(() => {
     const calculateUserStats = (userData: UserProgress[]) => {
+      const today = new Date(getDate()).toISOString().split('T')[0];
       if (!userData?.length) return { 
         currentStreak: 0, 
         dailyAverage: 0, 
@@ -65,30 +66,24 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
         studyConsistency: 0
       };
     
+      // Streak calculation
       let currentStreak = 0;
       const now = new Date(getDate());
       const sortedData = [...userData].sort((a, b) => 
         new Date(b.date).getTime() - new Date(a.date).getTime()
       );
-      
-      // Calculate streak excluding Sundays
+
       for (const day of sortedData) {
         const dayDate = new Date(day.date);
-        if (dayDate.getDay() === 0) continue; // Skip Sundays
+        if (dayDate.getDay() === 0 || dayDate.toDateString() === now.toDateString()) continue; // Skip Sundays and today
         
-        if (dayDate.toDateString() === now.toDateString() && day.completed < DAILY_TARGET) {
-          currentStreak = sortedData.length > 1 ? currentStreak : 0;
-          continue;
-        }
         if (day.completed >= DAILY_TARGET) {
           currentStreak++;
         } else {
           break;
         }
       }
-    
-      const today = new Date(getDate()).toISOString().split('T')[0];
-      
+           
       // Calculate daily average excluding Sundays AND today
       const nonSundayData = userData.filter(day => 
         new Date(day.date).getDay() !== 0 && // Exclude Sundays
@@ -175,12 +170,13 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
   }, [filteredData, selectedUser]);
 
   const trendData = useMemo(() => {
+    const today = new Date(getDate()).toISOString().split('T')[0];
     const windowSize = 7;
-    return filteredData.map((data, index) => {
-      // Get window of data excluding Sundays for averages
-      const window = filteredData
-        .slice(Math.max(0, index - windowSize + 1), index + 1)
-        .filter(d => new Date(d.date).getDay() !== 0);
+    return filteredData
+    .filter(d => d.date !== today) // Filter out today's data
+    .map((data, index, filteredArray) => {
+      const window = filteredArray
+        .slice(Math.max(0, index - windowSize + 1), index + 1);
       
       const avgCompleted = window.length > 0
         ? window.reduce((sum, d) => {
@@ -202,7 +198,7 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
         avgAccuracy: Math.round(avgAccuracy * 10) / 10
       };
     });
-  }, [filteredData, selectedUser]);
+}, [filteredData, selectedUser]);
 
   const selectedStats = selectedUser === 'user1' 
     ? stats.user1Stats 
