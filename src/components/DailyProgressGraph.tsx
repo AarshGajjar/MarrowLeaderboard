@@ -6,12 +6,22 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Flame, Calendar, Brain } from 'lucide-react';
 import MetricCard from '@/components/ui/MetricCard';
 import EnhancedProgress from '@/components/ui/EnhancedProgress';
+import TimeAnalysis from './TimeAnalysis';
 
 interface UserProgress {
   date: string;
   completed: number;
   correct: number;
   accuracy: number;
+}
+
+interface ActivityLog {
+  id: number;
+  user_type: 'user1' | 'user2';
+  completed: number;
+  correct: number;
+  timestamp: string;
+  created_at: string;
 }
 
 interface DailyData {
@@ -25,12 +35,13 @@ interface ProgressDashboardProps {
   user1Name: string;
   user2Name: string;
   getDate?: () => string; 
+  activityLogs: ActivityLog[];
 }
 
 const DAILY_TARGET = 300;
 const MIN_ACCURACY_TARGET = 70;
 
-const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], user1Name, user2Name,  getDate = () => new Date().toISOString().split('T')[0] }) => {
+const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], user1Name, user2Name,  getDate = () => new Date().toISOString().split('T')[0], activityLogs }) => {
   const [dateRange, setDateRange] = useState('week');
   const [selectedUser, setSelectedUser] = useState('both');
 
@@ -248,7 +259,7 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
               />
               <MetricCard
               title="Study Consistency"
-              value={(stats.user1Stats.studyConsistency + stats.user2Stats.studyConsistency) / 2}
+              value={Math.round((stats.user1Stats.studyConsistency + stats.user2Stats.studyConsistency) / 2)}
               valueUnit="%"
               icon={<Brain className="h-4 w-4" />}
               tooltip="Average Consistency of both users (last 30 days, excluding Sundays)"
@@ -278,7 +289,7 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
                 value={selectedStats.studyConsistency}
                 valueUnit="%"
                 icon={<Brain className="h-4 w-4" />}
-                tooltip="Days meeting targets (last 30 days, excluding Sundays)"
+                tooltip="Days with atleast 150 questions, and 70% accuracy (last 30 days, excluding Sundays)"
                 iconColor="#4ec9b0"
               />
             </div>
@@ -296,6 +307,7 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
               <TabsList className="w-full sm:w-auto">
                 <TabsTrigger value="progress">Progress</TabsTrigger>
                 <TabsTrigger value="trends">Trends</TabsTrigger>
+                <TabsTrigger value="timeAnalysis">Time Analysis</TabsTrigger>
               </TabsList>
   
               <TabsContent value="progress">
@@ -436,6 +448,13 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
                   </LineChart>
                   </ResponsiveContainer>
                 </div>
+              </TabsContent>
+              <TabsContent value="timeAnalysis">
+                <TimeAnalysis 
+                  activityLogs={activityLogs} 
+                  selectedUser={selectedUser} 
+                  dateRange={dateRange}
+                />
               </TabsContent>
             </Tabs>
           </div>

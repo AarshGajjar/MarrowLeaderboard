@@ -748,6 +748,7 @@ const QBankTracker = () => {
             user1Name={state.stats.user1.name}
             user2Name={state.stats.user2.name}
             getDate={getISTDate}
+            activityLogs={activityLogs}
           />
         )}
 
