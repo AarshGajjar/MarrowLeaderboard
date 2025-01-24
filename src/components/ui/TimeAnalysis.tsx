@@ -15,49 +15,62 @@ interface TimeAnalysisProps {
 }
 
 const TimeAnalysis: React.FC<TimeAnalysisProps> = ({ activityLogs, selectedUser, dateRange = 'all' }) => {
-  const { hourlyData, averageAccuracy, peakHour, lowPoint } = useMemo(() => {
+  const { hourlyData, averageAccuracy, peakPeriod, lowPeriod } = useMemo(() => {
     const filteredLogs = activityLogs.filter(log => 
       selectedUser === 'both' || log.user_type === selectedUser
     );
 
-    const hours = Array(24).fill(null).map((_, hour) => {
-      const logsInHour = filteredLogs.filter(log => 
-        new Date(log.timestamp).getHours() === hour
-      );
+    // Create 3-hour interval groups
+    const intervals = [
+      { label: '12 AM - 3 AM', range: [0, 3] },
+      { label: '3 AM - 6 AM', range: [3, 6] },
+      { label: '6 AM - 9 AM', range: [6, 9] },
+      { label: '9 AM - 12 PM', range: [9, 12] },
+      { label: '12 PM - 3 PM', range: [12, 15] },
+      { label: '3 PM - 6 PM', range: [15, 18] },
+      { label: '6 PM - 9 PM', range: [18, 21] },
+      { label: '9 PM - 12 AM', range: [21, 24] }
+    ];
+
+    const processedIntervals = intervals.map(interval => {
+      const logsInInterval = filteredLogs.filter(log => {
+        const hour = new Date(log.timestamp).getHours();
+        return hour >= interval.range[0] && hour < interval.range[1];
+      });
       
-      const totalCorrect = logsInHour.reduce((sum, log) => sum + log.correct, 0);
-      const totalCompleted = logsInHour.reduce((sum, log) => sum + log.completed, 0);
+      const totalCorrect = logsInInterval.reduce((sum, log) => sum + log.correct, 0);
+      const totalCompleted = logsInInterval.reduce((sum, log) => sum + log.completed, 0);
       const accuracy = totalCompleted > 0 ? Math.round((totalCorrect / totalCompleted) * 100 * 10) / 10 : 0;
 
       return {
-        hour: `${hour.toString().padStart(2, '0')}:00`,
+        hour: interval.label,
         accuracy,
-        attempts: logsInHour.length,
+        attempts: logsInInterval.length,
         totalQuestions: totalCompleted,
-        hourValue: hour
+        intervalValue: interval.range[0]
       };
-    });
+    }).filter(interval => interval.totalQuestions > 0); // Filter out intervals with no data
 
-    const validAccuracies = hours.filter(h => h.accuracy > 0).map(h => h.accuracy);
+    const validAccuracies = processedIntervals.filter(h => h.accuracy > 0).map(h => h.accuracy);
     const average = validAccuracies.length > 0 
       ? Math.round(validAccuracies.reduce((a, b) => a + b) / validAccuracies.length * 10) / 10
       : 0;
 
-    const peak = hours.reduce((max, curr) => 
+    const peak = processedIntervals.reduce((max, curr) => 
       (curr.accuracy > max.accuracy) ? curr : max, 
       { accuracy: 0, hour: '' }
     );
 
-    const low = hours.reduce((min, curr) => 
+    const low = processedIntervals.reduce((min, curr) => 
       (curr.accuracy > 0 && curr.accuracy < min.accuracy) ? curr : min,
       { accuracy: 100, hour: '' }
     );
 
     return {
-      hourlyData: hours,
+      hourlyData: processedIntervals,
       averageAccuracy: average,
-      peakHour: peak,
-      lowPoint: low
+      peakPeriod: peak,
+      lowPeriod: low
     };
   }, [activityLogs, selectedUser, dateRange]);
 
@@ -65,7 +78,7 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({ activityLogs, selectedUser,
     <div className="w-full">
       <div className="flex flex-wrap gap-4 justify-between items-center">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">Performance by Hour</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Performance by 3-Hour Intervals</h3>
           <p className="text-sm text-gray-500">Accuracy trends and activity patterns</p>
         </div>
         <div className="flex gap-4 text-sm">
@@ -123,7 +136,7 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({ activityLogs, selectedUser,
                 const data = payload[0].payload;
                 return (
                   <div className="bg-white p-4 shadow-lg rounded-lg border border-gray-100">
-                    <p className="font-semibold text-gray-800 mb-2">{data.hour}</p>
+                    <p className="font-semibold text-gray-800 mb-2">{data.hour} hrs</p>
                     <div className="space-y-1">
                       <div className="flex justify-between gap-4">
                         <span className="text-violet-600">Accuracy:</span>
@@ -163,19 +176,19 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({ activityLogs, selectedUser,
         </ResponsiveContainer>
 
         <div className="absolute top-0 right-0 flex gap-4">
-          {peakHour.accuracy > 0 && (
+          {peakPeriod.accuracy > 0 && (
             <div className="bg-green-50 px-3 py-2 rounded-lg text-sm">
               <span className="text-green-600 font-medium">Peak: </span>
               <span className="text-green-800">
-                {peakHour.hour} ({peakHour.accuracy}%)
+                {peakPeriod.hour} ({peakPeriod.accuracy}%)
               </span>
             </div>
           )}
-          {lowPoint.accuracy < 100 && (
+          {lowPeriod.accuracy < 100 && (
             <div className="bg-red-50 px-3 py-2 rounded-lg text-sm">
               <span className="text-red-600 font-medium">Low: </span>
               <span className="text-red-800">
-                {lowPoint.hour} ({lowPoint.accuracy}%)
+                {lowPeriod.hour} ({lowPeriod.accuracy}%)
               </span>
             </div>
           )}

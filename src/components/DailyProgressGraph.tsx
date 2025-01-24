@@ -6,7 +6,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Flame, Calendar, Brain } from 'lucide-react';
 import MetricCard from '@/components/ui/MetricCard';
 import EnhancedProgress from '@/components/ui/EnhancedProgress';
-import TimeAnalysis from './TimeAnalysis';
+import TimeAnalysis from '@/components/ui/TimeAnalysis';
 
 interface UserProgress {
   date: string;

@@ -7,7 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Flame, Calendar, Brain } from 'lucide-react';
 import MetricCard from '@/components/ui/MetricCard';
 import EnhancedProgress from '@/components/ui/EnhancedProgress';
-import TimeAnalysis from './TimeAnalysis';
+import TimeAnalysis from '@/components/ui/TimeAnalysis';
 const DAILY_TARGET = 300;
 const MIN_ACCURACY_TARGET = 70;
 const ProgressDashboard = ({ dailyData = [], user1Name, user2Name, getDate = () => new Date().toISOString().split('T')[0], activityLogs }) => {
