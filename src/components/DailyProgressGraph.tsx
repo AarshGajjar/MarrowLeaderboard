@@ -160,24 +160,34 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
   };
 
   const processedData = useMemo(() => {
-    return filteredData.map(data => {
-      const baseProcessed = calculateGoalProgress(data);
-      return {
-        ...data,
-        // Keep the combined stats for accuracy calculation
-        processedData: baseProcessed,
-        // Add separate values for user1 and user2
-        user1Completed: data.user1Data.completed,
-        user2Completed: data.user2Data.completed,
-        // Add separate accuracy values if needed
-        user1Accuracy: data.user1Data.completed > 0 
-          ? Math.round((data.user1Data.correct / data.user1Data.completed) * 100 * 10) / 10 
-          : 0,
-        user2Accuracy: data.user2Data.completed > 0 
-          ? Math.round((data.user2Data.correct / data.user2Data.completed) * 100 * 10) / 10 
-          : 0
-      };
-    });
+    return filteredData
+      .map(data => {
+        const baseProcessed = calculateGoalProgress(data);
+        return {
+          ...data,
+          // Keep the combined stats for accuracy calculation
+          processedData: baseProcessed,
+          // Add separate values for user1 and user2
+          user1Completed: data.user1Data.completed,
+          user2Completed: data.user2Data.completed,
+          // Add separate accuracy values if needed
+          user1Accuracy: data.user1Data.completed > 0 
+            ? Math.round((data.user1Data.correct / data.user1Data.completed) * 100 * 10) / 10 
+            : 0,
+          user2Accuracy: data.user2Data.completed > 0 
+            ? Math.round((data.user2Data.correct / data.user2Data.completed) * 100 * 10) / 10 
+            : 0
+        };
+      })
+      .filter(day => {
+        // Filter based on selected user
+        if (selectedUser === 'both') {
+          return day.user1Completed > 0 || day.user2Completed > 0;
+        }
+        return selectedUser === 'user1' 
+          ? day.user1Completed > 0 
+          : day.user2Completed > 0;
+      });
   }, [filteredData, selectedUser]);
 
   const trendData = useMemo(() => {
@@ -223,8 +233,6 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
         };
 
   const targetQuestions = selectedUser === 'both' ? DAILY_TARGET * 2 : DAILY_TARGET;
-
-  const progressPercentage = (selectedStats.todayProgress / targetQuestions) * 100;
 
   return (
     <div className="w-full space-y-6">

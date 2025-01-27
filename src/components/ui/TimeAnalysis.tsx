@@ -267,7 +267,7 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
 
   return (
     <div className="w-full">
-      <div className="flex flex-wrap gap-4 justify-between items-center">
+      <div className="flex flex-wrap gap-4 justify-between items-center mb-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Performance by 3-Hour Intervals</h3>
           <p className="text-sm text-gray-500">Accuracy trends and activity patterns</p>
@@ -308,28 +308,30 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
         </div>
       </div>
 
-      <div className="relative h-80 sm:h-96">
+      <div className="relative h-80 sm:h-96 mb-4">
         {renderChart()}
+      </div>
 
-        <div className="absolute top-0 right-0 flex gap-4">
+      {(peakPeriod.accuracy > 0 || lowPeriod.accuracy < 100) && (
+        <div className="flex gap-4 justify-end">
           {peakPeriod.accuracy > 0 && (
             <div className="bg-green-50 px-3 py-2 rounded-lg text-sm">
-              <span className="text-green-600 font-medium">Peak: </span>
-              <span className="text-green-800">
+              <span className="text-green-700 font-medium">Peak: </span>
+              <span className="text-green-600">
                 {peakPeriod.hour} ({peakPeriod.accuracy}%)
               </span>
             </div>
           )}
           {lowPeriod.accuracy < 100 && (
             <div className="bg-red-50 px-3 py-2 rounded-lg text-sm">
-              <span className="text-red-600 font-medium">Low: </span>
-              <span className="text-red-800">
+              <span className="text-red-700 font-medium">Low: </span>
+              <span className="text-red-600">
                 {lowPeriod.hour} ({lowPeriod.accuracy}%)
               </span>
             </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 };

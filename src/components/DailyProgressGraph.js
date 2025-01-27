@@ -108,7 +108,8 @@ const ProgressDashboard = ({ dailyData = [], user1Name, user2Name, getDate = () 
         };
     };
     const processedData = useMemo(() => {
-        return filteredData.map(data => {
+        return filteredData
+            .map(data => {
             const baseProcessed = calculateGoalProgress(data);
             return {
                 ...data,
@@ -125,6 +126,15 @@ const ProgressDashboard = ({ dailyData = [], user1Name, user2Name, getDate = () 
                     ? Math.round((data.user2Data.correct / data.user2Data.completed) * 100 * 10) / 10
                     : 0
             };
+        })
+            .filter(day => {
+            // Filter based on selected user
+            if (selectedUser === 'both') {
+                return day.user1Completed > 0 || day.user2Completed > 0;
+            }
+            return selectedUser === 'user1'
+                ? day.user1Completed > 0
+                : day.user2Completed > 0;
         });
     }, [filteredData, selectedUser]);
     const trendData = useMemo(() => {
@@ -165,7 +175,6 @@ const ProgressDashboard = ({ dailyData = [], user1Name, user2Name, getDate = () 
                 studyConsistency: Math.max(stats.user1Stats.studyConsistency, stats.user2Stats.studyConsistency)
             };
     const targetQuestions = selectedUser === 'both' ? DAILY_TARGET * 2 : DAILY_TARGET;
-    const progressPercentage = (selectedStats.todayProgress / targetQuestions) * 100;
     return (_jsx("div", { className: "w-full space-y-6", children: _jsxs(Card, { className: "w-full", children: [_jsx(CardHeader, { children: _jsx(CardTitle, { className: "text-xl md:text-2xl", children: "Study Progress Dashboard" }) }), _jsxs(CardContent, { children: [_jsx("div", { className: "flex justify-between gap-4 mb-6", children: _jsxs(Select, { value: selectedUser, onValueChange: setSelectedUser, children: [_jsx(SelectTrigger, { className: "w-40", children: _jsx(SelectValue, { placeholder: "Select User" }) }), _jsxs(SelectContent, { children: [_jsx(SelectItem, { value: "both", children: "Both Users" }), _jsx(SelectItem, { value: "user1", children: user1Name }), _jsx(SelectItem, { value: "user2", children: user2Name })] })] }) }), selectedUser === "both" ? (_jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [_jsx(MetricCard, { title: "Daily Average", value: selectedStats.dailyAverage, valueUnit: "questions", icon: _jsx(Calendar, { className: "h-4 w-4" }), tooltip: "Average questions per day (excluding Sundays)", iconColor: "#a855f7" }), _jsx(MetricCard, { title: "Study Consistency", value: Math.round((stats.user1Stats.studyConsistency + stats.user2Stats.studyConsistency) / 2), valueUnit: "%", icon: _jsx(Brain, { className: "h-4 w-4" }), tooltip: "Average Consistency of both users (last 30 days, excluding Sundays)", iconColor: "#4ec9b0" })] })) : (_jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-4", children: [_jsx(MetricCard, { title: "Current Streak", value: selectedStats.currentStreak, valueUnit: "days", icon: _jsx(Flame, { className: "h-4 w-4" }), tooltip: "Days with target completed (excluding Sundays)", iconColor: "#f97316" }), _jsx(MetricCard, { title: "Daily Average", value: selectedStats.dailyAverage, valueUnit: "questions", icon: _jsx(Calendar, { className: "h-4 w-4" }), tooltip: "Average questions per day (excluding Sundays)", iconColor: "#a855f7" }), _jsx(MetricCard, { title: "Study Consistency", value: selectedStats.studyConsistency, valueUnit: "%", icon: _jsx(Brain, { className: "h-4 w-4" }), tooltip: "Days with atleast 150 questions, and 70% accuracy (last 30 days, excluding Sundays)", iconColor: "#4ec9b0" })] })), _jsx("div", { className: "w-full mt-4", children: _jsx(EnhancedProgress, { current: selectedStats.todayProgress, target: targetQuestions }) }), _jsx("div", { className: "w-full mt-6", children: _jsxs(Tabs, { defaultValue: "progress", className: "w-full", children: [_jsxs(TabsList, { className: "w-full sm:w-auto", children: [_jsx(TabsTrigger, { value: "progress", children: "Progress" }), _jsx(TabsTrigger, { value: "trends", children: "Trends" }), _jsx(TabsTrigger, { value: "timeAnalysis", children: "Time Analysis" })] }), _jsxs(TabsContent, { value: "progress", children: [_jsx("div", { className: "mb-4", children: _jsxs(Select, { value: dateRange, onValueChange: setDateRange, children: [_jsx(SelectTrigger, { className: "w-40", children: _jsx(SelectValue, { placeholder: "Date Range" }) }), _jsxs(SelectContent, { children: [_jsx(SelectItem, { value: "week", children: "Last Week" }), _jsx(SelectItem, { value: "month", children: "Last Month" }), _jsx(SelectItem, { value: "all", children: "All Time" })] })] }) }), _jsx("div", { className: "w-full aspect-[4/3] sm:aspect-[16/9]", children: _jsx(ResponsiveContainer, { width: "100%", height: "100%", children: _jsxs(ComposedChart, { data: processedData, margin: { top: 10, right: 10, bottom: 20, left: 10 }, children: [_jsx(CartesianGrid, { strokeDasharray: "3 3", opacity: 0.3 }), _jsx(XAxis, { dataKey: "date", tick: { fontSize: 12 }, tickMargin: 10 }), _jsx(YAxis, { yAxisId: "left", label: { value: 'Questions', angle: -90, position: 'insideLeft', offset: 0 }, domain: [0, 'auto'], tick: { fontSize: 12 } }), _jsx(YAxis, { yAxisId: "right", orientation: "right", label: { value: 'Accuracy %', angle: 90, position: 'insideRight', offset: 0 }, domain: [0, 100], tick: { fontSize: 12 } }), _jsx(Tooltip, { formatter: (value, name) => {
                                                                     if (name === "Accuracy") {
                                                                         return [`${value}%`, name];
