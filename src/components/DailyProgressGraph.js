@@ -8,7 +8,7 @@ import { Flame, Calendar, Brain } from 'lucide-react';
 import MetricCard from '@/components/ui/MetricCard';
 import EnhancedProgress from '@/components/ui/EnhancedProgress';
 import TimeAnalysis from '@/components/ui/TimeAnalysis';
-const DAILY_TARGET = 300;
+const DAILY_TARGET = 200;
 const MIN_ACCURACY_TARGET = 70;
 const ProgressDashboard = ({ dailyData = [], user1Name, user2Name, getDate = () => new Date().toISOString().split('T')[0], activityLogs }) => {
     const [dateRange, setDateRange] = useState('week');

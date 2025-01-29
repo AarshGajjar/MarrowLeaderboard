@@ -38,7 +38,7 @@ interface ProgressDashboardProps {
   activityLogs: ActivityLog[];
 }
 
-const DAILY_TARGET = 300;
+const DAILY_TARGET = 200;
 const MIN_ACCURACY_TARGET = 70;
 
 const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], user1Name, user2Name,  getDate = () => new Date().toISOString().split('T')[0], activityLogs }) => {
