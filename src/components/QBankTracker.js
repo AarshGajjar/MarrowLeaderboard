@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Crosshair, TrendingUp, Award, Target, Plus, Lock, XCircle, Clock, Crown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ProgressDashboard from './DailyProgressGraph';
+import CountdownTimer from './ui/Countdown';
 import imgSrc from '@/assets/marrow.png';
 // Utility functions
 const calculateAccuracy = (correct, total) => {
@@ -336,7 +337,7 @@ const QBankTracker = () => {
         fetchData();
         fetchDailyProgress();
     }, []);
-    return (_jsxs(Card, { className: "w-full max-w-xl bg-gradient-to-br from-slate-50 to-slate-100 shadow-lg", children: [_jsxs(CardHeader, { className: "space-y-1", children: [_jsx("div", { className: "flex justify-center", children: _jsx("img", { src: imgSrc, alt: "Marrow Logo", className: "w-12 h-12" }) }), _jsx(CardTitle, { className: "text-2xl text-center font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent", children: "Marrow QBank Challenge" })] }), _jsxs(CardContent, { className: "space-y-6", children: [_jsx(StatsComparison, { stats: state.stats }), ['user1', 'user2'].map((user) => (_jsxs("div", { className: "space-y-3 p-4 rounded-lg bg-white shadow-sm", children: [_jsxs("div", { className: "flex flex-wrap gap-3", children: [_jsxs("div", { className: "flex items-center gap-2", children: [_jsx(Target, { className: "text-blue-500", size: 20 }), _jsx("span", { className: "font-medium", children: state.stats[user].name })] }), _jsxs(Button, { variant: "ghost", size: "sm", className: "ml-auto", onClick: () => setState(prev => ({
+    return (_jsxs(Card, { className: "w-full max-w-xl bg-gradient-to-br from-slate-50 to-slate-100 shadow-lg", children: [_jsxs(CardHeader, { className: "space-y-1", children: [_jsx("div", { className: "flex justify-center", children: _jsx("img", { src: imgSrc, alt: "Marrow Logo", className: "w-12 h-12" }) }), _jsx(CardTitle, { className: "text-2xl text-center font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent", children: "Marrow QBank Challenge" })] }), _jsx(CardContent, { className: "space-y-6", children: _jsx(CountdownTimer, {}) }), _jsxs(CardContent, { className: "space-y-6", children: [_jsx(StatsComparison, { stats: state.stats }), ['user1', 'user2'].map((user) => (_jsxs("div", { className: "space-y-3 p-4 rounded-lg bg-white shadow-sm", children: [_jsxs("div", { className: "flex flex-wrap gap-3", children: [_jsxs("div", { className: "flex items-center gap-2", children: [_jsx(Target, { className: "text-blue-500", size: 20 }), _jsx("span", { className: "font-medium", children: state.stats[user].name })] }), _jsxs(Button, { variant: "ghost", size: "sm", className: "ml-auto", onClick: () => setState(prev => ({
                                             ...prev,
                                             showPasswordInput: { ...prev.showPasswordInput, [user]: true }
                                         })), children: [_jsx(Plus, { size: 16, className: "mr-1" }), "Add Progress"] })] }), state.showPasswordInput[user] && (_jsxs("div", { className: "space-y-2", children: [_jsxs("div", { className: "flex items-center gap-2", children: [_jsx(Lock, { size: 16, className: "text-gray-500" }), _jsx(Input, { type: "password", value: state.password[user], onChange: (e) => setState(prev => ({

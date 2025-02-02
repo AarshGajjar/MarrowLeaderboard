@@ -194,7 +194,7 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
     const today = new Date(getDate()).toISOString().split('T')[0];
     const windowSize = 7;
     return filteredData
-    .filter(d => d.date !== today) // Filter out today's data
+  //.filter(d => d.date !== today) // Filter out today's data
     .map((data, index, filteredArray) => {
       const window = filteredArray
         .slice(Math.max(0, index - windowSize + 1), index + 1);

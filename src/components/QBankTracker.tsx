@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Crosshair, TrendingUp, Award, Target, Plus, Lock, XCircle, Clock, Crown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ProgressDashboard from './DailyProgressGraph';
+import CountdownTimer from './ui/Countdown';
 import imgSrc from '@/assets/marrow.png';
 
 // Type definitions
@@ -608,6 +609,7 @@ const QBankTracker = () => {
           Marrow QBank Challenge
         </CardTitle>
       </CardHeader>
+      <CardContent className="space-y-6"><CountdownTimer /></CardContent>
       <CardContent className="space-y-6">
         <StatsComparison stats={state.stats} />
         
