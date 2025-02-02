@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Crosshair, TrendingUp, Award, Target, Plus, Lock, XCircle, Clock, Crown } from 'lucide-react';
+import { Crosshair, TrendingUp, Award, Target, Plus, Lock, XCircle, Clock, Crown, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ProgressDashboard from './DailyProgressGraph';
 import CountdownTimer from './ui/Countdown';
@@ -284,31 +284,53 @@ const StatsComparison = ({ stats }: { stats: { user1: UserStats; user2: UserStat
 // Activity Log Component
 const ActivityLogSection = ({ 
   logs, 
-  userNames 
+  userNames,
+  onRefresh 
 }: { 
   logs: ActivityLog[];
-  userNames: { user1: string; user2: string; }
+  userNames: { user1: string; user2: string; };
+  onRefresh: () => Promise<void>;
 }) => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const filteredLogs = logs.filter(log => isSameDate(log.timestamp, selectedDate));
 
   const dailyTotals = filteredLogs.reduce((acc, log) => {
-    const userType = log.user_type;
-    if (!acc[userType]) {
-      acc[userType] = { completed: 0, correct: 0 };
-    }
+    const userType = log.user_type as 'user1' | 'user2';
     acc[userType].completed += log.completed;
     acc[userType].correct += log.correct;
     return acc;
-  }, {} as Record<'user1' | 'user2', { completed: number; correct: number; }>);
+  }, {
+    user1: { completed: 0, correct: 0 },
+    user2: { completed: 0, correct: 0 }
+  });
+  
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   return (
     <Card className="w-full max-w-2xl">
       <div className="p-4 border-b space-y-3">
-        <div className="font-medium flex items-center gap-2">
-          <Clock className="w-4 h-4" />
-          Activity Log
+      <div className="flex items-center justify-between">
+          <div className="font-medium flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            Activity Log
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
         </div>
         <Input
           type="date"
@@ -316,15 +338,15 @@ const ActivityLogSection = ({
           onChange={(e) => setSelectedDate(e.target.value)}
           className="w-full"
         />
-        {Object.entries(dailyTotals).map(([userType, totals]) => (
+        {(['user1', 'user2'] as const).map((userType) => (
           <div key={userType} className="text-sm text-gray-600">
             <span className="font-medium">
-              {userType === 'user1' ? userNames.user1 : userNames.user2}
+              {userNames[userType]}
             </span>
             {" total: "}
-            {totals.completed} completed, {totals.correct} correct
+            {dailyTotals[userType].completed} completed, {dailyTotals[userType].correct} correct
             {" ("}
-            {calculateAccuracy(totals.correct, totals.completed)}
+            {calculateAccuracy(dailyTotals[userType].correct, dailyTotals[userType].completed)}
             {"% accuracy)"}
           </div>
         ))}
@@ -401,6 +423,12 @@ const QBankTracker = () => {
   const verifyPassword = (user: UserKey, password: string): boolean => {
     const passwords = { user1: '9696', user2: '6969' };
     return password === passwords[user];
+  };
+
+  // Refresh data function
+  const refreshData = async () => {
+    await fetchData();
+    await fetchDailyProgress();
   };
 
   // Data fetching functions
@@ -761,6 +789,7 @@ const QBankTracker = () => {
               user1: state.stats.user1.name,
               user2: state.stats.user2.name
             }}
+            onRefresh={refreshData}
           />
         )}
         

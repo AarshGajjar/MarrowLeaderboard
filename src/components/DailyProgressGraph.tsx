@@ -193,33 +193,36 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ dailyData = [], u
   const trendData = useMemo(() => {
     const today = new Date(getDate()).toISOString().split('T')[0];
     const windowSize = 7;
-    return filteredData
-  //.filter(d => d.date !== today) // Filter out today's data
-    .map((data, index, filteredArray) => {
-      const window = filteredArray
-        .slice(Math.max(0, index - windowSize + 1), index + 1);
-      
-      const avgCompleted = window.length > 0
-        ? window.reduce((sum, d) => {
-            const stats = calculateGoalProgress(d);
-            return sum + stats.completed;
-          }, 0) / window.length
-        : 0;
-      
-      const avgAccuracy = window.length > 0
-        ? window.reduce((sum, d) => {
-            const stats = calculateGoalProgress(d);
-            return sum + stats.accuracy;
-          }, 0) / window.length
-        : 0;
 
-      return {
-        date: data.date,
-        avgCompleted: Math.round(avgCompleted * 10) / 10,
-        avgAccuracy: Math.round(avgAccuracy * 10) / 10
-      };
-    });
-}, [filteredData, selectedUser]);
+    return filteredData
+      .map(data => {
+        const stats = calculateGoalProgress(data);
+        return {
+          date: data.date,
+          completed: stats.completed,
+          accuracy: stats.accuracy
+        };
+      })
+      .filter(day => day.completed > 0) // Filter out days with no activity
+      .map((data, index, activeArray) => {
+        const window = activeArray
+          .slice(Math.max(0, index - windowSize + 1), index + 1);
+        
+        const avgCompleted = window.length > 0
+          ? window.reduce((sum, d) => sum + d.completed, 0) / window.length
+          : 0;
+        
+        const avgAccuracy = window.length > 0
+          ? window.reduce((sum, d) => sum + d.accuracy, 0) / window.length
+          : 0;
+
+        return {
+          date: data.date,
+          avgCompleted: Math.round(avgCompleted * 10) / 10,
+          avgAccuracy: Math.round(avgAccuracy * 10) / 10
+        };
+      });
+  }, [filteredData, selectedUser]);
 
   const selectedStats = selectedUser === 'user1' 
     ? stats.user1Stats 

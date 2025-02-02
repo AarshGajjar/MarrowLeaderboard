@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Crosshair, TrendingUp, Award, Target, Plus, Lock, XCircle, Clock, Crown } from 'lucide-react';
+import { Crosshair, TrendingUp, Award, Target, Plus, Lock, XCircle, Clock, Crown, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ProgressDashboard from './DailyProgressGraph';
 import CountdownTimer from './ui/Countdown';
@@ -109,19 +109,29 @@ const StatsComparison = ({ stats }) => {
     return (_jsxs("div", { className: "space-y-4 mb-6 p-4 bg-white rounded-lg shadow-sm", children: [_jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-4 text-center", children: [_jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "font-medium text-lg", children: stats.user1.name }), _jsxs("div", { className: "text-3xl font-bold text-blue-600", children: [user1Metrics.accuracy, "%"] }), _jsxs("div", { className: "text-sm text-gray-600", children: [stats.user1.completed, " questions"] }), _jsxs("div", { className: "text-sm text-gray-600", children: [stats.user1.correct, " correct"] }), _jsxs("div", { className: "text-sm font-medium text-purple-600", children: [user1Metrics.points, " points"] })] }), _jsxs("div", { className: "flex flex-col items-center justify-center space-y-3", children: [_jsx("div", { className: "text-xl font-semibold text-purple-600 mb-2", children: "VS" }), displayComparisons.map((value) => (_jsxs("div", { className: `w-full p-2 rounded-lg ${value.leader === 'user1' ? 'bg-blue-50' : 'bg-purple-50'}`, children: [_jsxs("div", { className: "flex items-center justify-between mb-1", children: [_jsxs("div", { className: "flex items-center gap-1 text-gray-600", children: [getMetricIcon(value.metric), _jsx("span", { className: "text-sm capitalize", children: value.metric })] }), _jsx("span", { className: `text-sm font-medium ${value.leader === 'user1' ? 'text-blue-600' : 'text-purple-600'}`, children: stats[value.leader].name })] }), _jsx("div", { className: "flex justify-between items-baseline", children: _jsxs("span", { className: "text-lg font-bold", children: ["+", value.value] }) })] }, value.metric)))] }), _jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "font-medium text-lg", children: stats.user2.name }), _jsxs("div", { className: "text-3xl font-bold text-blue-600", children: [user2Metrics.accuracy, "%"] }), _jsxs("div", { className: "text-sm text-gray-600", children: [stats.user2.completed, " questions"] }), _jsxs("div", { className: "text-sm text-gray-600", children: [stats.user2.correct, " correct"] }), _jsxs("div", { className: "text-sm font-medium text-purple-600", children: [user2Metrics.points, " points"] })] })] }), _jsxs("div", { className: "flex justify-center items-center space-x-2 bg-yellow-50 rounded-full px-4 py-2", children: [_jsx(Crown, { size: 16, className: "text-yellow-500" }), _jsxs("span", { className: "text-sm font-medium text-yellow-700", children: [stats[comparison.overallLeader].name, " is leading with ", comparison.comparisons.points.value, " more points!"] })] }), _jsx("div", { className: "text-xs text-center text-gray-500 mt-2", children: "Points = Questions Completed + Bonus for Accuracy above 80%" })] }));
 };
 // Activity Log Component
-const ActivityLogSection = ({ logs, userNames }) => {
+const ActivityLogSection = ({ logs, userNames, onRefresh }) => {
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const filteredLogs = logs.filter(log => isSameDate(log.timestamp, selectedDate));
     const dailyTotals = filteredLogs.reduce((acc, log) => {
         const userType = log.user_type;
-        if (!acc[userType]) {
-            acc[userType] = { completed: 0, correct: 0 };
-        }
         acc[userType].completed += log.completed;
         acc[userType].correct += log.correct;
         return acc;
-    }, {});
-    return (_jsxs(Card, { className: "w-full max-w-2xl", children: [_jsxs("div", { className: "p-4 border-b space-y-3", children: [_jsxs("div", { className: "font-medium flex items-center gap-2", children: [_jsx(Clock, { className: "w-4 h-4" }), "Activity Log"] }), _jsx(Input, { type: "date", value: selectedDate, onChange: (e) => setSelectedDate(e.target.value), className: "w-full" }), Object.entries(dailyTotals).map(([userType, totals]) => (_jsxs("div", { className: "text-sm text-gray-600", children: [_jsx("span", { className: "font-medium", children: userType === 'user1' ? userNames.user1 : userNames.user2 }), " total: ", totals.completed, " completed, ", totals.correct, " correct", " (", calculateAccuracy(totals.correct, totals.completed), "% accuracy)"] }, userType)))] }), _jsx("div", { className: "max-h-64 overflow-y-auto", children: _jsx("div", { className: "p-4 space-y-2", children: filteredLogs.length > 0 ? (filteredLogs.map((log) => (_jsxs("div", { className: "text-sm p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors", children: [_jsxs("div", { className: "flex justify-between items-center", children: [_jsx("span", { className: "font-medium text-gray-900", children: log.user_type === 'user1' ? userNames.user1 : userNames.user2 }), _jsx("span", { className: "text-gray-500 text-xs", children: formatDate(log.timestamp) })] }), _jsxs("div", { className: "text-gray-600 mt-1", children: [_jsxs("span", { className: "inline-block mr-3", children: ["Completed: ", log.completed] }), _jsxs("span", { className: "inline-block mr-3", children: ["Correct: ", log.correct] }), _jsxs("span", { className: "inline-block", children: ["Accuracy: ", calculateAccuracy(log.correct, log.completed), "%"] })] })] }, log.id)))) : (_jsx("div", { className: "text-center text-gray-500 py-4", children: "No entries found for this date" })) }) })] }));
+    }, {
+        user1: { completed: 0, correct: 0 },
+        user2: { completed: 0, correct: 0 }
+    });
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            await onRefresh();
+        }
+        finally {
+            setIsRefreshing(false);
+        }
+    };
+    return (_jsxs(Card, { className: "w-full max-w-2xl", children: [_jsxs("div", { className: "p-4 border-b space-y-3", children: [_jsxs("div", { className: "flex items-center justify-between", children: [_jsxs("div", { className: "font-medium flex items-center gap-2", children: [_jsx(Clock, { className: "w-4 h-4" }), "Activity Log"] }), _jsx(Button, { variant: "ghost", size: "sm", onClick: handleRefresh, disabled: isRefreshing, children: _jsx(RefreshCw, { className: `w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}` }) })] }), _jsx(Input, { type: "date", value: selectedDate, onChange: (e) => setSelectedDate(e.target.value), className: "w-full" }), ['user1', 'user2'].map((userType) => (_jsxs("div", { className: "text-sm text-gray-600", children: [_jsx("span", { className: "font-medium", children: userNames[userType] }), " total: ", dailyTotals[userType].completed, " completed, ", dailyTotals[userType].correct, " correct", " (", calculateAccuracy(dailyTotals[userType].correct, dailyTotals[userType].completed), "% accuracy)"] }, userType)))] }), _jsx("div", { className: "max-h-64 overflow-y-auto", children: _jsx("div", { className: "p-4 space-y-2", children: filteredLogs.length > 0 ? (filteredLogs.map((log) => (_jsxs("div", { className: "text-sm p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors", children: [_jsxs("div", { className: "flex justify-between items-center", children: [_jsx("span", { className: "font-medium text-gray-900", children: log.user_type === 'user1' ? userNames.user1 : userNames.user2 }), _jsx("span", { className: "text-gray-500 text-xs", children: formatDate(log.timestamp) })] }), _jsxs("div", { className: "text-gray-600 mt-1", children: [_jsxs("span", { className: "inline-block mr-3", children: ["Completed: ", log.completed] }), _jsxs("span", { className: "inline-block mr-3", children: ["Correct: ", log.correct] }), _jsxs("span", { className: "inline-block", children: ["Accuracy: ", calculateAccuracy(log.correct, log.completed), "%"] })] })] }, log.id)))) : (_jsx("div", { className: "text-center text-gray-500 py-4", children: "No entries found for this date" })) }) })] }));
 };
 // Main component
 const QBankTracker = () => {
@@ -157,6 +167,11 @@ const QBankTracker = () => {
     const verifyPassword = (user, password) => {
         const passwords = { user1: '9696', user2: '6969' };
         return password === passwords[user];
+    };
+    // Refresh data function
+    const refreshData = async () => {
+        await fetchData();
+        await fetchDailyProgress();
     };
     // Data fetching functions
     const fetchData = async () => {
@@ -382,6 +397,6 @@ const QBankTracker = () => {
                         })), user1Name: state.stats.user1.name, user2Name: state.stats.user2.name, getDate: getISTDate, activityLogs: activityLogs })), activityLogs.length > 0 && (_jsx(ActivityLogSection, { logs: activityLogs, userNames: {
                             user1: state.stats.user1.name,
                             user2: state.stats.user2.name
-                        } }))] })] }));
+                        }, onRefresh: refreshData }))] })] }));
 };
 export default QBankTracker;
