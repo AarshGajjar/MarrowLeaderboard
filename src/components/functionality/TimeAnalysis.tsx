@@ -32,7 +32,7 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
   selectedUser, 
   dateRange = 'all' 
 }) => {
-  const [viewType, setViewType] = useState<'chart' | 'scatter'>('chart');
+  const [viewType, setViewType] = useState<'chart' | 'scatter' | 'clock'>('chart');
 
   const { 
     hourlyData, 
@@ -117,6 +117,81 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
       scatterData
     };
   }, [activityLogs, selectedUser, dateRange]);
+
+  const getClockIndicators = (data: any[]) => {
+    return Array.from({ length: 24 }, (_, hour) => {
+      const interval = data.find(d => 
+        d.intervalValue <= hour && 
+        hour < (d.intervalValue + 3)
+      );
+      
+      return {
+        hour,
+        rotation: hour * 15,
+        activity: interval?.totalQuestions || 0,
+        accuracy: interval?.accuracy || 0
+      };
+    });
+  };
+
+  const renderClock = () => {
+    const indicators = getClockIndicators(hourlyData);
+    const maxActivity = Math.max(...indicators.map(i => i.activity));
+
+    return (
+      <div className="relative w-80 h-80 mx-auto">
+        <div className="absolute inset-0 rounded-full border-4 border-gray-200">
+          {indicators.map((indicator) => {
+            const activityScale = indicator.activity / maxActivity;
+            const accuracyColor = indicator.accuracy >= 70 
+              ? 'bg-green-500' 
+              : indicator.accuracy >= 50 
+                ? 'bg-yellow-500' 
+                : 'bg-red-500';
+
+            return (
+              <div
+                key={indicator.hour}
+                className="absolute w-1 transform -translate-x-1/2 origin-bottom"
+                style={{
+                  height: '48%',
+                  left: '50%',
+                  top: '2%',
+                  transform: `rotate(${indicator.rotation}deg)`
+                }}
+              >
+                {indicator.activity > 0 && (
+                  <div
+                    className={`absolute bottom-0 w-full ${accuracyColor}`}
+                    style={{
+                      height: `${Math.max(activityScale * 100, 10)}%`,
+                      opacity: 0.6
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
+          
+          {/* Clock numbers */}
+          {[0, 3, 6, 9, 12, 15, 18, 21].map((hour) => (
+            <div
+              key={hour}
+              className="absolute text-sm font-medium text-gray-600"
+              style={{
+                left: '50%',
+                top: '50%',
+                transform: `rotate(${hour * 15}deg) translateY(-120%) rotate(-${hour * 15}deg)`
+              }}
+            >
+              {hour === 0 ? '12' : hour > 12 ? hour - 12 : hour}
+              {hour < 12 ? 'AM' : 'PM'}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   const renderChart = () => {
     if (viewType === 'scatter') {
@@ -294,6 +369,16 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
             >
               Scatter
             </button>
+            <button 
+              onClick={() => setViewType('clock')}
+              className={`px-3 py-1 rounded-md text-sm ${
+                viewType === 'clock' 
+                  ? 'bg-violet-600 text-white' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Clock
+            </button>
           </div>
           <div className="flex gap-4 text-sm hidden sm:flex">
             <div className="flex items-center gap-2">
@@ -309,7 +394,7 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
       </div>
 
       <div className="relative h-80 sm:h-96 mb-4">
-        {renderChart()}
+        {viewType === 'clock' ? renderClock() : viewType === 'scatter' ? renderChart() : renderChart()}
       </div>
 
       {(peakPeriod.accuracy > 0 || lowPeriod.accuracy < 100) && (

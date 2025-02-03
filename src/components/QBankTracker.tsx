@@ -1,20 +1,74 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Crosshair, TrendingUp, Award, Target, Plus, Lock, XCircle, Clock, Crown, RefreshCw } from 'lucide-react';
+import {
+  Crosshair, Award, Check, AlertCircle, ChevronDown, ChevronUp
+} from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '../lib/supabase';
-import ProgressDashboard from './DailyProgressGraph';
 import CountdownTimer from './ui/Countdown';
 import imgSrc from '@/assets/marrow.png';
+import StatsComparison from './functionality/StatsComparision';
+import DualUserProgress from './functionality/EnhancedProgress';
+import  ActivityLogs from './functionality/ActivityLogs';
 
 // Type definitions
-type UserKey = 'user1' | 'user2';
-
 interface UserStats {
   completed: number;
   correct: number;
   name: string;
+}
+
+const DAILY_TARGET = 200;
+
+type UserKey = 'user1' | 'user2';
+type AlertType = 'success' | 'error';
+
+interface StatsComparisonProps {
+  stats: {
+    user1: UserStats;
+    user2: UserStats;
+  };
+  onUpdateProgress: (user: UserKey, completed: number, correct: number) => Promise<void>;
+  showPasswordInput: {
+    user1: boolean;
+    user2: boolean;
+  };
+  setShowPasswordInput: (user: UserKey, value: boolean) => void;
+  passwordState: {
+    user1: string;
+    user2: string;
+  };
+  onPasswordChange: (user: UserKey, value: string) => void;
+  error: {
+    user1: string;
+    user2: string;
+  };
+}
+
+interface SectionHeaderProps {
+  title: string;
+  isExpanded: boolean;
+  onToggle: () => void;
+  icon: React.ReactNode;
+}
+
+interface StatusAlertProps {
+  message: string;
+  type: AlertType;
+  onClose: () => void;
+}
+
+interface UserProgress {
+  completed: number;
+  correct: number;
+  date: string;
+  accuracy: number;
+}
+
+interface DailyData {
+  user1Data: UserProgress;
+  user2Data: UserProgress;
+  date: string;
 }
 
 interface ActivityLog {
@@ -126,7 +180,6 @@ const determineLeader = (
   };
 };
 
-// Add these type definitions
 interface Comparison {
   diff: number;
   leader: UserKey;
@@ -175,220 +228,67 @@ const isSameDate = (date1: string, date2: string): boolean => {
   );
 };
 
-// Stats comparison component
-const StatsComparison = ({ stats }: { stats: { user1: UserStats; user2: UserStats } }) => {
-  const user1Metrics = calculateMetrics(stats.user1);
-  const user2Metrics = calculateMetrics(stats.user2);
-  const comparison = determineLeader(user1Metrics, user2Metrics);
+const getMetricIcon = (metric: string): React.ReactNode => {
+  switch (metric) {
+    case 'accuracy':
+      return <Crosshair className="w-4 h-4" />;
+    case 'questions':
+      return <Award className="w-4 h-4" />;
+    case 'correct':
+      return <Check className="w-4 h-4" />;
+    default:
+      return null;
+  }
+};
 
-  // Filter out points from VS display (keep accuracy, volume, effectiveScore)
-  const displayComparisons = Object.entries(comparison.comparisons)
-    .filter(([key]) => key !== 'points')
-    .map(([key, value]) => value);
-
-  const getMetricIcon = (metric: string) => {
-    switch (metric) {
-      case 'accuracy':
-        return <Crosshair className="w-4 h-4" />;
-      case 'questions':
-        return <Award className="w-4 h-4" />;
-      default:
-        return <TrendingUp className="w-4 h-4" />;
+const convertToDailyData = (progress: DailyProgress[]): DailyData[] => {
+  return progress.map(p => ({
+    date: p.date,
+    user1Data: {
+      completed: p.user1Completed,
+      correct: p.user1Correct,
+      date: p.date,
+      accuracy: p.user1Completed > 0 ? (p.user1Correct / p.user1Completed) * 100 : 0
+    },
+    user2Data: {
+      completed: p.user2Completed,
+      correct: p.user2Correct,
+      date: p.date,
+      accuracy: p.user2Completed > 0 ? (p.user2Correct / p.user2Completed) * 100 : 0
     }
-  };
-
-  return (
-    <div className="space-y-4 mb-6 p-4 bg-white rounded-lg shadow-sm">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-        {/* User 1 Stats */}
-        <div className="space-y-2">
-          <div className="font-medium text-lg">{stats.user1.name}</div>
-          <div className="text-3xl font-bold text-blue-600">
-            {user1Metrics.accuracy}%
-          </div>
-          <div className="text-sm text-gray-600">
-            {stats.user1.completed} questions
-          </div>
-          <div className="text-sm text-gray-600">
-            {stats.user1.correct} correct
-          </div>
-          <div className="text-sm font-medium text-purple-600">
-            {user1Metrics.points} points
-          </div>
-        </div>
-
-        {/* Comparison Section */}
-        <div className="flex flex-col items-center justify-center space-y-3">
-          <div className="text-xl font-semibold text-purple-600 mb-2">VS</div>
-          {displayComparisons.map((value) => (
-            <div
-              key={value.metric}
-              className={`w-full p-2 rounded-lg ${
-                value.leader === 'user1' ? 'bg-blue-50' : 'bg-purple-50'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-1 text-gray-600">
-                  {getMetricIcon(value.metric)}
-                  <span className="text-sm capitalize">{value.metric}</span>
-                </div>
-                <span className={`text-sm font-medium ${
-                  value.leader === 'user1' ? 'text-blue-600' : 'text-purple-600'
-                }`}>
-                  {stats[value.leader].name}
-                </span>
-              </div>
-              <div className="flex justify-between items-baseline">
-                <span className="text-lg font-bold">
-                  +{value.value}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* User 2 Stats */}
-        <div className="space-y-2">
-          <div className="font-medium text-lg">{stats.user2.name}</div>
-          <div className="text-3xl font-bold text-blue-600">
-            {user2Metrics.accuracy}%
-          </div>
-          <div className="text-sm text-gray-600">
-            {stats.user2.completed} questions
-          </div>
-          <div className="text-sm text-gray-600">
-            {stats.user2.correct} correct
-          </div>
-          <div className="text-sm font-medium text-purple-600">
-            {user2Metrics.points} points
-          </div>
-        </div>
+  }));
+};
+  // Section toggle component
+  const SectionHeader: React.FC<SectionHeaderProps> = ({ title, isExpanded, onToggle, icon }) => (
+    <div
+      className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
+      onClick={onToggle}
+    >
+      <div className="flex items-center gap-2">
+        {icon}
+        <h3 className="font-medium">{title}</h3>
       </div>
-
-      <div className="flex justify-center items-center space-x-2 bg-yellow-50 rounded-full px-4 py-2">
-        <Crown size={16} className="text-yellow-500" />
-        <span className="text-sm font-medium text-yellow-700">
-          {stats[comparison.overallLeader].name} is leading with {
-            comparison.comparisons.points.value
-          } more points!
-        </span>
-      </div>
-
-      <div className="text-xs text-center text-gray-500 mt-2">
-        Points = Questions Completed + Bonus for Accuracy above 80%
-      </div>
+      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
     </div>
   );
-};
 
-// Activity Log Component
-const ActivityLogSection = ({ 
-  logs, 
-  userNames,
-  onRefresh 
-}: { 
-  logs: ActivityLog[];
-  userNames: { user1: string; user2: string; };
-  onRefresh: () => Promise<void>;
-}) => {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const filteredLogs = logs.filter(log => isSameDate(log.timestamp, selectedDate));
-
-  const dailyTotals = filteredLogs.reduce((acc, log) => {
-    const userType = log.user_type as 'user1' | 'user2';
-    acc[userType].completed += log.completed;
-    acc[userType].correct += log.correct;
-    return acc;
-  }, {
-    user1: { completed: 0, correct: 0 },
-    user2: { completed: 0, correct: 0 }
-  });
-  
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await onRefresh();
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  return (
-    <Card className="w-full max-w-2xl">
-      <div className="p-4 border-b space-y-3">
-      <div className="flex items-center justify-between">
-          <div className="font-medium flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            Activity Log
-          </div>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </Button>
-        </div>
-        <Input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          className="w-full"
-        />
-        {(['user1', 'user2'] as const).map((userType) => (
-          <div key={userType} className="text-sm text-gray-600">
-            <span className="font-medium">
-              {userNames[userType]}
-            </span>
-            {" total: "}
-            {dailyTotals[userType].completed} completed, {dailyTotals[userType].correct} correct
-            {" ("}
-            {calculateAccuracy(dailyTotals[userType].correct, dailyTotals[userType].completed)}
-            {"% accuracy)"}
-          </div>
-        ))}
+  // Alert component
+  const StatusAlert: React.FC<StatusAlertProps> = ({ message, type, onClose }) => (
+    <Alert className={`${type === 'success' ? 'bg-green-50' : 'bg-red-50'} mb-4`}>
+      <div className="flex items-center gap-2">
+        {type === 'success' ? (
+          <Check className="w-4 h-4 text-green-500" />
+        ) : (
+          <AlertCircle className="w-4 h-4 text-red-500" />
+        )}
+        <AlertDescription>{message}</AlertDescription>
       </div>
-      <div className="max-h-64 overflow-y-auto">
-        <div className="p-4 space-y-2">
-          {filteredLogs.length > 0 ? (
-            filteredLogs.map((log) => (
-              <div 
-                key={log.id} 
-                className="text-sm p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-gray-900">
-                    {log.user_type === 'user1' ? userNames.user1 : userNames.user2}
-                  </span>
-                  <span className="text-gray-500 text-xs">
-                    {formatDate(log.timestamp)}
-                  </span>
-                </div>
-                <div className="text-gray-600 mt-1">
-                  <span className="inline-block mr-3">Completed: {log.completed}</span>
-                  <span className="inline-block mr-3">Correct: {log.correct}</span>
-                  <span className="inline-block">
-                    Accuracy: {calculateAccuracy(log.correct, log.completed)}%
-                  </span>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center text-gray-500 py-4">
-              No entries found for this date
-            </div>
-          )}
-        </div>
-      </div>
-    </Card>
+    </Alert>
   );
-};
 
 // Main component
-const QBankTracker = () => {
+const QBankTracker: React.FC = () => {
+  
   const [state, setState] = useState<AppState>({
     stats: {
       user1: { completed: 0, correct: 0, name: "Aarsh" },
@@ -397,6 +297,10 @@ const QBankTracker = () => {
     inputs: {
       user1: { completed: '', correct: '' },
       user2: { completed: '', correct: '' }
+    },
+    showInputs: {
+      user1: false,
+      user2: false
     },
     error: {
       user1: '',
@@ -409,27 +313,34 @@ const QBankTracker = () => {
     showPasswordInput: {
       user1: false,
       user2: false
-    },
-    showInputs: {
-      user1: false,
-      user2: false
     }
   });
 
   const [dailyProgress, setDailyProgress] = useState<DailyProgress[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
 
-  // Password verification
-  const verifyPassword = (user: UserKey, password: string): boolean => {
-    const passwords = { user1: '9696', user2: '6969' };
-    return password === passwords[user];
-  };
-
   // Refresh data function
   const refreshData = async () => {
     await fetchData();
     await fetchDailyProgress();
   };
+
+  // Alerts
+  const [showAlert, setShowAlert] = useState<{
+    message: string;
+    type: AlertType;
+    visible: boolean;
+  }>({ message: '', type: 'success', visible: false });
+
+  const [expandedSections, setExpandedSections] = useState<{
+    progress: boolean;
+    charts: boolean;
+    logs: boolean;
+  }>({
+    progress: true,
+    charts: false,
+    logs: false,
+  });
 
   // Data fetching functions
   const fetchData = async () => {
@@ -528,29 +439,10 @@ const QBankTracker = () => {
     }
   };
 
-  const handlePasswordSubmit = (user: UserKey) => {
-    if (verifyPassword(user, state.password[user])) {
-      setState(prev => ({
-        ...prev,
-        showPasswordInput: { ...prev.showPasswordInput, [user]: false },
-        showInputs: { ...prev.showInputs, [user]: true },
-        password: { ...prev.password, [user]: '' },
-        error: { ...prev.error, [user]: '' }
-      }));
-    } else {
-      setState(prev => ({
-        ...prev,
-        error: { ...prev.error, [user]: 'Incorrect password' }
-      }));
-    }
-  };
-
-  const handleSubmit = async (user: UserKey) => {
-    const newCompleted = parseInt(state.inputs[user].completed) || 0;
-    const newCorrect = parseInt(state.inputs[user].correct) || 0;
-
+  const handleSubmit = async (user: UserKey, completed: number, correct: number) => {
+    
     // Validation
-    if (newCompleted === 0 || newCorrect > newCompleted || newCompleted < 0 || newCorrect < 0) {
+    if (completed === 0 || correct > completed || completed < 0 || correct < 0) {
       setState(prev => ({
         ...prev,
         error: { ...prev.error, [user]: "Invalid input values" }
@@ -563,61 +455,49 @@ const QBankTracker = () => {
         ...state.stats,
         [user]: {
           ...state.stats[user],
-          completed: state.stats[user].completed + newCompleted,
-          correct: state.stats[user].correct + newCorrect,
+          completed: state.stats[user].completed + completed,
+          correct: state.stats[user].correct + correct,
         },
       };
-
-      // Create the activity log entry
-      const { data: logData, error: logError } = await supabase
+  
+      // Update stats in database
+      const { error: statsError } = await supabase
+        .from('qbank_stats')
+        .upsert({
+          id: 'main',
+          stats: updatedStats,
+          last_updated: new Date().toISOString(),
+        });
+  
+      if (statsError) throw statsError;
+  
+      // Create activity log entry
+      const { error: logError } = await supabase
         .from('activity_logs')
         .insert({
           user_type: user,
-          completed: newCompleted,
-          correct: newCorrect,
+          completed: completed,
+          correct: correct,
           timestamp: new Date().toISOString()
-        })
-        .select()
-        .single();
-
+        });
+  
       if (logError) throw logError;
-
-      // Update stats and daily progress
-      const [statsResult, progressResult] = await Promise.all([
-        supabase
-          .from('qbank_stats')
-          .upsert({
-            id: 'main',
-            stats: updatedStats,
-            last_updated: new Date().toISOString(),
-          }),
-        updateDailyProgress(user, newCompleted, newCorrect)
-      ]);
-
-      if (statsResult.error) throw statsResult.error;
-
+  
+      // Update daily progress
+      await updateDailyProgress(user, completed, correct);
+  
       // Update local state
       setState(prev => ({
         ...prev,
-        stats: updatedStats,
-        inputs: { ...prev.inputs, [user]: { completed: '', correct: '' } },
-        showInputs: { ...prev.showInputs, [user]: false }
+        stats: updatedStats
       }));
-
-      // Update activity logs state with the new entry
-      if (logData) {
-        setActivityLogs(prev => [logData, ...prev.slice(0, 9)]); // Keep only the last 10 entries
-      }
-
+  
       // Refresh data to ensure consistency
       await fetchData();
-
+  
     } catch (error) {
-      console.error('Failed to update data:', error);
-      setState(prev => ({
-        ...prev,
-        error: { ...prev.error, [user]: "Failed to update progress" }
-      }));
+      console.error('Failed to update progress:', error);
+      throw error; // This will be caught by the StatsComparison component
     }
   };
 
@@ -637,165 +517,55 @@ const QBankTracker = () => {
           Marrow QBank Challenge
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6"><CountdownTimer /></CardContent>
-      <CardContent className="space-y-6">
-        <StatsComparison stats={state.stats} />
-        
-        {(['user1', 'user2'] as UserKey[]).map((user) => (
-          <div key={user} className="space-y-3 p-4 rounded-lg bg-white shadow-sm">
-            <div className="flex flex-wrap gap-3">
-              <div className="flex items-center gap-2">
-                <Target className="text-blue-500" size={20} />
-                <span className="font-medium">{state.stats[user].name}</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-auto"
-                onClick={() => setState(prev => ({
-                  ...prev,
-                  showPasswordInput: { ...prev.showPasswordInput, [user]: true }
-                }))}
-              >
-                <Plus size={16} className="mr-1" />
-                Add Progress
-              </Button>
-            </div>
-
-            {state.showPasswordInput[user] && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Lock size={16} className="text-gray-500" />
-                  <Input
-                    type="password"
-                    value={state.password[user]}
-                    onChange={(e) => setState(prev => ({
-                      ...prev,
-                      password: { ...prev.password, [user]: e.target.value },
-                      error: { ...prev.error, [user]: '' }
-                    }))}
-                    placeholder="Enter password"
-                    className="flex-1"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setState(prev => ({
-                      ...prev,
-                      showPasswordInput: { ...prev.showPasswordInput, [user]: false },
-                      password: { ...prev.password, [user]: '' },
-                      error: { ...prev.error, [user]: '' }
-                    }))}
-                  >
-                    <XCircle size={16} />
-                  </Button>
-                </div>
-                {state.error[user] && (
-                  <div className="text-red-500 text-sm">{state.error[user]}</div>
-                )}
-                <Button 
-                  onClick={() => handlePasswordSubmit(user)}
-                  className="w-full"
-                >
-                  Verify Password
-                </Button>
-              </div>
-            )}
-
-            {state.showInputs[user] && (
-              <div className="space-y-2">
-                <Input
-                  type="number"
-                  value={state.inputs[user].completed}
-                  onChange={(e) => setState(prev => ({
-                    ...prev,
-                    inputs: {
-                      ...prev.inputs,
-                      [user]: { ...prev.inputs[user], completed: e.target.value }
-                    },
-                    error: { ...prev.error, [user]: '' }
-                  }))}
-                  placeholder="Questions completed in this session"
-                  className="w-full"
-                />
-                <Input
-                  type="number"
-                  value={state.inputs[user].correct}
-                  onChange={(e) => setState(prev => ({
-                    ...prev,
-                    inputs: {
-                      ...prev.inputs,
-                      [user]: { ...prev.inputs[user], correct: e.target.value }
-                    },
-                    error: { ...prev.error, [user]: '' }
-                  }))}
-                  placeholder="Correct answers in this session"
-                  className="w-full"
-                />
-                {state.error[user] && (
-                  <div className="text-red-500 text-sm">{state.error[user]}</div>
-                )}
-                <Button 
-                  onClick={() => handleSubmit(user)}
-                  className="w-full"
-                >
-                  Add Progress
-                </Button>
-              </div>
-            )}
-            
-            {!state.showInputs[user] && !state.showPasswordInput[user] && (
-              <div className="space-y-1">
-                <div>Total Questions: {state.stats[user].completed}</div>
-                <div>Correct: {state.stats[user].correct}</div>
-                <div className="font-semibold text-lg">
-                  Accuracy: {calculateAccuracy(state.stats[user].correct, state.stats[user].completed)}%
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-
-        {dailyProgress.length > 0 && (
-          <ProgressDashboard 
-            dailyData={dailyProgress.map(day => ({
-              date: day.date,
-              user1Data: {
-                date: day.date,
-                completed: day.user1Completed,
-                correct: day.user1Correct,
-                accuracy: (day.user1Correct / day.user1Completed * 100) || 0,
-                goalProgress: (day.user1Correct / day.user1Completed * 100) || 0,
-              },
-              user2Data: {
-                date: day.date,
-                completed: day.user2Completed,
-                correct: day.user2Correct,
-                accuracy: (day.user2Correct / day.user2Completed * 100) || 0,
-                goalProgress: (day.user2Correct / day.user2Completed * 100) || 0,
-              }
-            }))}
-            user1Name={state.stats.user1.name}
-            user2Name={state.stats.user2.name}
-            getDate={getISTDate}
-            activityLogs={activityLogs}
+      <CardContent className="space-y-6"><CountdownTimer />
+        {showAlert.visible && (
+          <StatusAlert
+            message={showAlert.message}
+            type={showAlert.type}
+            onClose={() => setShowAlert(prev => ({ ...prev, visible: false }))}
           />
         )}
 
-        {activityLogs.length > 0 && (
-          <ActivityLogSection 
-            logs={activityLogs}
-            userNames={{
-              user1: state.stats.user1.name,
-              user2: state.stats.user2.name
-            }}
-            onRefresh={refreshData}
-          />
-        )}
-        
+        <StatsComparison
+          stats={state.stats}
+          onUpdateProgress={handleSubmit}
+          dailyData={dailyProgress}
+          activityLogs={activityLogs}
+        />
+
+        {/* Daily progress section */}
+        <DualUserProgress
+          user1={{
+            name:state.stats.user1.name,
+            current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user1Completed : 0,
+            color: "#2563eb"
+          }}
+          user2={{
+            name:state.stats.user2.name, 
+            current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user2Completed : 0,
+            color: "#7242eb"
+          }}
+          target={DAILY_TARGET}
+        />
+
+        {/* Activity Logs Section */}
+        <div className="border rounded-lg overflow-hidden">
+          <ActivityLogs
+              logs={activityLogs}
+              userNames={{
+                user1: state.stats.user1.name,
+                user2: state.stats.user2.name
+              }}
+              onRefresh={refreshData}
+            />
+        </div>
       </CardContent>
     </Card>
   );
 };
 
 export default QBankTracker;
+
+function setShowAlert(arg0: { message: string; type: string; visible: boolean; }) {
+  throw new Error('Function not implemented.');
+}
