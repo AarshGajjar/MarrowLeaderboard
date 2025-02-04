@@ -42,29 +42,29 @@ export const calculateConsistencyAndStreak = (userData: any[]) => {
       if (!day?.date) return false;
       const date = new Date(day.date);
       const utcDay = date.getUTCDay();
-      if (utcDay === 0) return false;
+      if (utcDay === 0) return false; // Exclude Sundays
 
       const dayUTCMidnight = getUTCMidnight(date);
-      return dayUTCMidnight < todayUTCMidnight;
+      return dayUTCMidnight < todayUTCMidnight; // Exclude current day
     })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Descending order
 
   if (validData.length === 0) return { consistency: 0, streak: 0 };
 
-  // Calculate consistency
+  // Calculate consistency (unchanged)
   const consistentDays = validData.filter(day => {
     const accuracy = (day.correct / day.completed * 100).toFixed(2);
     return day.completed >= DAILY_TARGET * 0.5 && parseFloat(accuracy) >= MIN_ACCURACY_TARGET;
   });
   const consistency = Number((consistentDays.length / validData.length * 100).toFixed(2));
 
-  // Calculate streak
+  // Calculate streak with Sunday skipping
   let streak = 0;
   let prevDateUTC: number | null = null;
 
   for (const day of validData) {
     const accuracy = Number((day.correct / day.completed * 100).toFixed(2));
-    if (day.completed >= DAILY_TARGET / 2 && accuracy >= MIN_ACCURACY_TARGET) {
+    if (day.completed >= (DAILY_TARGET / 2) && accuracy >= MIN_ACCURACY_TARGET) {
       const currentDate = new Date(day.date);
       const currentUTCMidnight = getUTCMidnight(currentDate);
 
@@ -72,7 +72,15 @@ export const calculateConsistencyAndStreak = (userData: any[]) => {
         streak = 1;
         prevDateUTC = currentUTCMidnight;
       } else {
-        const expectedDateUTC: number = prevDateUTC - 86400000; // Previous day in UTC
+        // Calculate expected previous date, skipping Sundays
+        let expectedDateUTC: number = prevDateUTC - 86400000; // Subtract one day
+        let expectedDate = new Date(expectedDateUTC);
+        // Keep subtracting days if the expected date is a Sunday
+        while (expectedDate.getUTCDay() === 0) {
+          expectedDateUTC -= 86400000;
+          expectedDate = new Date(expectedDateUTC);
+        }
+
         if (currentUTCMidnight === expectedDateUTC) {
           streak++;
           prevDateUTC = currentUTCMidnight;

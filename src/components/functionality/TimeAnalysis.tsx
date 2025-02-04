@@ -173,21 +173,29 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
             );
           })}
           
-          {/* Clock numbers */}
-          {[0, 3, 6, 9, 12, 15, 18, 21].map((hour) => (
-            <div
-              key={hour}
-              className="absolute text-sm font-medium text-gray-600"
-              style={{
-                left: '50%',
-                top: '50%',
-                transform: `rotate(${hour * 15}deg) translateY(-120%) rotate(-${hour * 15}deg)`
-              }}
-            >
-              {hour === 0 ? '12' : hour > 12 ? hour - 12 : hour}
-              {hour < 12 ? 'AM' : 'PM'}
-            </div>
-          ))}
+          {/* Updated clock numbers */}
+          {[0, 3, 6, 9, 12, 15, 18, 21].map((hour) => {
+            const angle = hour * 15;
+            const radius = 140; // Increased radius for label placement
+            const x = 50 + 42 * Math.sin(angle * Math.PI / 180);
+            const y = 50 - 42 * Math.cos(angle * Math.PI / 180);
+            
+            return (
+              <div
+                key={hour}
+                className="absolute text-xxs font-medium text-gray-600 transform -translate-x-1/2 -translate-y-1/2"
+                style={{
+                  left: `${x}%`,
+                  top: `${y}%`,
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  padding: '2px 4px',
+                  borderRadius: '1px',
+                }}
+              >
+                {`${hour === 0 ? '12' : hour > 12 ? hour - 12 : hour}${hour < 12 ? 'AM' : 'PM'}`}
+              </div>
+            );
+          })}
         </div>
       </div>
     );

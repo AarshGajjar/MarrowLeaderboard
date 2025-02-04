@@ -12,6 +12,7 @@ import {
   calculateDailyAverage,
   calculateConsistencyAndStreak 
 } from '@/utils/dataPreprocessing';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type UserKey = 'user1' | 'user2';
 
@@ -319,14 +320,23 @@ const StatsComparison: React.FC<{
           </div>
 
           {/* Leader Banner */}
-          <div className="mt-8 flex justify-center">
-            <div className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-lg shadow-sm">
+            <div className="mt-8 flex justify-center">
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+              <TooltipTrigger>
+              <div className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-lg shadow-sm cursor-help">
               <Crown className="w-5 h-5 text-yellow-500" />
               <span className="font-medium text-slate-700">
                 {stats[leader].name} leads by {pointsDiff} points
               </span>
+              </div>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs" side="top">
+              <p className="text-s">Points = Questions Completed + +2% points per 1% accuracy above 80%</p>
+              </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             </div>
-          </div>
 
           {/* Dialogs remain unchanged */}
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
