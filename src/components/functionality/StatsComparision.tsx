@@ -148,7 +148,7 @@ const StatsComparison: React.FC<{
       <div className="flex items-center gap-4">
         <div className="w-16 text-right">
         <span className="font-semibold text-sm text-[#7242eb] px-3 py-1 rounded-lg bg-purple-50 border border-purple-100 shadow-sm">
-          {value1}{unit}
+          {unit === '%' ? value1.toFixed(2) : value1}{unit}
         </span>
         </div>
         
@@ -177,14 +177,14 @@ const StatsComparison: React.FC<{
         
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-xs font-bold bg-white/90 px-2 py-0.5 rounded-full shadow-sm">
-          {Math.abs(value1 - value2).toFixed(unit === '%' ? 1 : 0)}{unit}
+          {Math.abs(value1 - value2).toFixed(unit === '%' ? 2 : 0)}{unit}
           </span>
         </div>
         </div>
         
         <div className="w-16 text-left">
         <span className="font-semibold text-sm text-[#7242eb] px-3 py-1 rounded-lg bg-purple-50 border border-purple-100 shadow-sm">
-          {value2}{unit}
+          {unit === '%' ? value2.toFixed(2) : value2}{unit}
         </span>
         </div>
       </div>

@@ -187,7 +187,7 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1, user2, targe
   return (
     <Card className="w-full">
       <CardContent className="pt-2 pb-4 px-6 relative">
-        <p className="text-sm text-center mb-2 pb-5 text-slate-600">{getMotivationalMessage()}</p>
+        <p className="text-m text-center mb-2 pb-5 text-slate-600 font-semibold bg-gradient-to-r from-purple-100/50 to-blue-100/50 py-2 px-4 rounded-lg shadow-sm">{getMotivationalMessage()}</p>
         <div className="relative mt-16 mx-[6%]">
           <div className="h-3 w-full rounded-full bg-[#faf5ff] overflow-hidden shadow-inner">
             {[user1Stats, user2Stats].map((stats, index) => {
