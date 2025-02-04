@@ -195,18 +195,38 @@ const StatsComparison: React.FC<{
 
   return (
     <>
-      <Card className="w-full max-w-3xl mx-auto bg-gradient-to-br from-slate-50 to-slate-100 shadow-lg">
+      <Card className="w-full max-w-3xl mx-auto shadow-lg">
         <CardContent className="p-6">
           <div className="grid grid-cols-3 gap-4 mb-8">
             {/* User 1 Header */}
-            <div className="text-center">
+            <div className="text-center space-y-2">
               <h3 className="text-lg font-semibold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent p-2 rounded-xl backdrop-blur-sm bg-white/30 shadow-sm border border-purple-100">
                 {stats.user1.name}
               </h3>
+              <div className="flex justify-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => { setActiveUser('user1'); setIsDialogOpen(true); }}
+                  className="hover:bg-purple-50 border-purple-600/20"
+                >
+                  <Plus className="w-4 h-4 mr-1 text-purple-600" />
+                  <span className="text-purple-600">Add</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => { setSelectedProgressUser('user1'); setShowProgress(true); }}
+                  className="hover:bg-blue-50 border-blue-600/20"
+                >
+                  <ChartLine className="w-4 h-4 mr-1 text-blue-600" />
+                  <span className="text-blue-600">Stats</span>
+                </Button>
+              </div>
             </div>
             
             {/* VS Header */}
-              <div className="text-center">
+            <div className="text-center">
               <div className="relative">
                 <div className="absolute inset-0 bg-slate-100/50 rounded-full transform -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 w-12 h-12"></div>
                 <button 
@@ -245,10 +265,30 @@ const StatsComparison: React.FC<{
               </div>
             
             {/* User 2 Header */}
-            <div className="text-center">
+            <div className="text-center space-y-2">
               <h3 className="text-lg font-semibold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent p-2 rounded-xl backdrop-blur-sm bg-white/30 shadow-sm border border-purple-100">
                 {stats.user2.name}
               </h3>
+              <div className="flex justify-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => { setActiveUser('user2'); setIsDialogOpen(true); }}
+                  className="hover:bg-purple-50 border-purple-600/20"
+                >
+                  <Plus className="w-4 h-4 mr-1 text-purple-600" />
+                  <span className="text-purple-600">Add</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => { setSelectedProgressUser('user2'); setShowProgress(true); }}
+                  className="hover:bg-blue-50 border-blue-600/20"
+                >
+                  <ChartLine className="w-4 h-4 mr-1 text-blue-600" />
+                  <span className="text-blue-600">Stats</span>
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -272,53 +312,6 @@ const StatsComparison: React.FC<{
             />
           </div>
 
-          {/* Buttons */}
-          <div className="grid grid-cols-3 gap-4 mt-8">
-            <div className="flex flex-col sm:flex-row justify-center gap-2 px-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => { setActiveUser('user1'); setIsDialogOpen(true); }}
-                className="w-full sm:w-24 hover:bg-purple-50 border-purple-600/20"
-              >
-                <Plus className="w-4 h-4 mr-1 text-purple-600" />
-                <span className="text-purple-600">Add</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => { setSelectedProgressUser('user1'); setShowProgress(true); }}
-                className="w-full sm:w-24 hover:bg-blue-50 border-blue-600/20"
-              >
-                <ChartLine className="w-4 h-4 mr-1 text-blue-600" />
-                <span className="text-blue-600">Stats</span>
-              </Button>
-            </div>
-            
-            <div /> {/* Empty middle column */}
-            
-            <div className="flex flex-col sm:flex-row justify-center gap-2 px-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => { setActiveUser('user2'); setIsDialogOpen(true); }}
-                className="w-full sm:w-24 hover:bg-purple-50 border-purple-600/20"
-              >
-                <Plus className="w-4 h-4 mr-1 text-purple-600" />
-                <span className="text-purple-600">Add</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => { setSelectedProgressUser('user2'); setShowProgress(true); }}
-                className="w-full sm:w-24 hover:bg-blue-50 border-blue-600/20"
-              >
-                <ChartLine className="w-4 h-4 mr-1 text-blue-600" />
-                <span className="text-blue-600">Stats</span>
-              </Button>
-            </div>
-          </div>
-
           {/* Leader Banner */}
             <div className="mt-8 flex justify-center">
             <TooltipProvider>
@@ -338,7 +331,6 @@ const StatsComparison: React.FC<{
             </TooltipProvider>
             </div>
 
-          {/* Dialogs remain unchanged */}
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
             if (!open) {
