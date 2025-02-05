@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ChartLine, Crown, Plus } from 'lucide-react';
+import { ChartLine, Crown, Plus, Swords } from 'lucide-react';
 import ProgressPopup from '@/components/functionality/ProgressPopup';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import UserStatsRadarChart from '@/components/functionality/RadarChart';
-import { toast, Toaster } from 'sonner';
+import { toast } from 'sonner';
 import { 
   calculateMetrics,
   calculateDailyAverage,
@@ -133,9 +133,9 @@ const StatsComparison: React.FC<{
 
   const ComparisonBar: React.FC<{ label: string; value1: number; value2: number; unit?: string }> = ({ label, value1, value2, unit = '' }) => {
     const colors = {
-      better: 'bg-gradient-to-r from-purple-600 to-blue-600',
-      worse: 'bg-gradient-to-r from-slate-400 to-slate-500',
-      label: 'text-slate-700'
+      better: 'bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-500 dark:to-blue-500',
+      worse: 'bg-gradient-to-r from-slate-400 to-slate-500 dark:from-slate-600 dark:to-slate-700',
+      label: 'text-slate-700 dark:text-slate-200'
     };
 
     const max = Math.max(value1, value2)*1.3;
@@ -144,10 +144,10 @@ const StatsComparison: React.FC<{
 
     return (
       <div className="w-full p-4 rounded-lg">
-      <div className="text-sm font-medium text-center mb-3 text-slate-700">{label}</div>
+      <div className="text-s font-medium text-center mb-3 text-white-700">{label}</div>
       <div className="flex items-center gap-4">
         <div className="w-16 text-right">
-        <span className="font-semibold text-sm text-[#7242eb] px-3 py-1 rounded-lg bg-purple-50 border border-purple-100 shadow-sm">
+        <span className="font-semibold text-l text-[#7242eb] dark:text-purple-400 px-3 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-800 shadow-sm">
           {unit === '%' ? value1.toFixed(2) : value1}{unit}
         </span>
         </div>
@@ -176,14 +176,14 @@ const StatsComparison: React.FC<{
         </div>
         
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-xs font-bold bg-white/90 px-2 py-0.5 rounded-full shadow-sm">
+          <span className="text-xs font-bold bg-white/90 dark:bg-slate-900/90 px-2 py-0.5 rounded-full shadow-sm">
           {Math.abs(value1 - value2).toFixed(unit === '%' ? 2 : 0)}{unit}
           </span>
         </div>
         </div>
         
         <div className="w-16 text-left">
-        <span className="font-semibold text-sm text-[#7242eb] px-3 py-1 rounded-lg bg-purple-50 border border-purple-100 shadow-sm">
+        <span className="font-semibold text-l text-[#4287eb] dark:text-blue-400 px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800 shadow-sm">
           {unit === '%' ? value2.toFixed(2) : value2}{unit}
         </span>
         </div>
@@ -195,43 +195,57 @@ const StatsComparison: React.FC<{
 
   return (
     <>
-      <Card className="w-full max-w-3xl mx-auto shadow-lg">
-        <CardContent className="p-6">
-          <div className="grid grid-cols-3 gap-4 mb-8">
-            {/* User 1 Header */}
+      <Card className="w-full max-w-2xl shadow-lg rounded-lg overflow-hidden bg-gradient-to-br from-white/80 via-white/90 to-white/80 dark:from-slate-900/80 dark:via-slate-900/90 dark:to-slate-900/80 backdrop-blur-sm border border-white/20 dark:border-slate-800/20">
+      <CardHeader className="border-b p-4 bg-gradient-to-r from-purple-600/10 to-blue-600/10 dark:from-purple-900/20 dark:to-blue-900/20">
+        <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+              <Swords className="w-5 h-5 text-amber-500" />
+              <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                Battle Arena
+              </span>
+            </CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="p-4 sm:p-6">
+        {/* Header section with flexible spacing */}
+        <div className="flex flex-row justify-between items-start mb-8 gap-2">
+          {/* User 1 Header */}
+          <div className="flex-1">
             <div className="text-center space-y-2">
-              <h3 className="text-lg font-semibold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent p-2 rounded-xl backdrop-blur-sm bg-white/30 shadow-sm border border-purple-100">
+                <h3 className="font-semibold text-xl text-[#7242eb] dark:text-purple-400 px-3 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-800 shadow-sm">
                 {stats.user1.name}
-              </h3>
-              <div className="flex justify-center gap-2">
+                </h3>
+              <div className="flex flex-col sm:flex-row justify-center gap-1 sm:gap-2">
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={() => { setActiveUser('user1'); setIsDialogOpen(true); }}
-                  className="hover:bg-purple-50 border-purple-600/20"
+                  className="hover:bg-purple-50 border-purple-600/20 text-xs sm:text-sm w-full sm:w-auto"
                 >
-                  <Plus className="w-4 h-4 mr-1 text-purple-600" />
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-purple-600" />
                   <span className="text-purple-600">Add</span>
                 </Button>
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={() => { setSelectedProgressUser('user1'); setShowProgress(true); }}
-                  className="hover:bg-blue-50 border-blue-600/20"
+                  className="hover:bg-blue-50 border-blue-600/20 text-xs sm:text-sm w-full sm:w-auto"
                 >
-                  <ChartLine className="w-4 h-4 mr-1 text-blue-600" />
+                  <ChartLine className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-blue-600" />
                   <span className="text-blue-600">Stats</span>
                 </Button>
               </div>
             </div>
-            
-            {/* VS Header */}
+          </div>
+          
+          {/* VS Header */}
+          <div className="flex-shrink-0 w-16 sm:w-24">
             <div className="text-center">
               <div className="relative">
-                <div className="absolute inset-0 bg-slate-100/50 rounded-full transform -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 w-12 h-12"></div>
+                <div className="absolute inset-0 bg-slate-100/50 dark:bg-slate-800/50 rounded-full transform -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 w-8 sm:w-12 h-8 sm:h-12"></div>
                 <button 
                   onClick={() => setIsRadarChartOpen(true)}
-                  className="text-lg font-semibold text-purple-600/70 relative z-10 p-2 hover:text-blue-600 transition-colors"
+                  className="text-base sm:text-lg font-semibold text-purple-600/70 relative z-10 p-2 hover:text-blue-600 transition-colors"
                 >
                   VS
                 </button>
@@ -262,35 +276,38 @@ const StatsComparison: React.FC<{
                   />
                 </div>
               </div>
-              </div>
-            
-            {/* User 2 Header */}
+            </div>
+          </div>
+          
+          {/* User 2 Header */}
+          <div className="flex-1">
             <div className="text-center space-y-2">
-              <h3 className="text-lg font-semibold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent p-2 rounded-xl backdrop-blur-sm bg-white/30 shadow-sm border border-purple-100">
-                {stats.user2.name}
-              </h3>
-              <div className="flex justify-center gap-2">
+            <h3 className="font-semibold text-xl text-[#4287eb] dark:text-blue-400 px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800 shadow-sm">
+              {stats.user2.name}
+            </h3>
+              <div className="flex flex-col sm:flex-row justify-center gap-1 sm:gap-2">
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={() => { setActiveUser('user2'); setIsDialogOpen(true); }}
-                  className="hover:bg-purple-50 border-purple-600/20"
+                  className="hover:bg-purple-50 border-purple-600/20 text-xs sm:text-sm w-full sm:w-auto"
                 >
-                  <Plus className="w-4 h-4 mr-1 text-purple-600" />
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-purple-600" />
                   <span className="text-purple-600">Add</span>
                 </Button>
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={() => { setSelectedProgressUser('user2'); setShowProgress(true); }}
-                  className="hover:bg-blue-50 border-blue-600/20"
+                  className="hover:bg-blue-50 border-blue-600/20 text-xs sm:text-sm w-full sm:w-auto"
                 >
-                  <ChartLine className="w-4 h-4 mr-1 text-blue-600" />
+                  <ChartLine className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-blue-600" />
                   <span className="text-blue-600">Stats</span>
                 </Button>
               </div>
             </div>
           </div>
+        </div>
 
           {/* Comparisons */}
           <div className="space-y-4">
@@ -313,23 +330,23 @@ const StatsComparison: React.FC<{
           </div>
 
           {/* Leader Banner */}
-            <div className="mt-8 flex justify-center">
-            <TooltipProvider>
-              <Tooltip delayDuration={0}>
+          <div className="mt-8 flex justify-center">
+          <TooltipProvider>
+            <Tooltip delayDuration={0}>
               <TooltipTrigger>
-              <div className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-lg shadow-sm cursor-help">
-              <Crown className="w-5 h-5 text-yellow-500" />
-              <span className="font-medium text-slate-700">
-                {stats[leader].name} leads by {pointsDiff} points
-              </span>
-              </div>
+                <div className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:to-yellow-800/30 rounded-lg shadow-sm cursor-help">
+                  <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 dark:text-yellow-400" />
+                  <span className="text-sm sm:text-base font-medium text-slate-700 dark:text-slate-200">
+                    {stats[leader].name} leads by {pointsDiff} points
+                  </span>
+                </div>
               </TooltipTrigger>
               <TooltipContent className="max-w-xs" side="top">
-              <p className="text-s">Points = Questions Completed + +2% points per 1% accuracy above 80%</p>
+                <p className="text-xs sm:text-sm">Points = Questions Completed + +2% points per 1% accuracy above 80%</p>
               </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            </div>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
 
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
@@ -403,7 +420,6 @@ const StatsComparison: React.FC<{
           />
         </CardContent>
       </Card>
-      <Toaster />
     </>
   );
 };

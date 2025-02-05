@@ -140,9 +140,9 @@ const DailyProgressGraph: React.FC<ProgressDashboardProps> = ({
 
   return (
     <div className="w-full">
-      <Card className="w-full">
+      <Card className="w-full dark:bg-slate-900">
         <CardHeader>
-          <CardTitle className="text-xl md:text-2xl">
+          <CardTitle className="text-xl md:text-2xl dark:text-white">
             Stats Dashboard - {selectedUser === 'user1' ? user1Name : user2Name}
           </CardTitle>
         </CardHeader>
@@ -186,24 +186,24 @@ const DailyProgressGraph: React.FC<ProgressDashboardProps> = ({
                 <div className="w-full aspect-[4/3] sm:aspect-[16/9]">
                   <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={processedData} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} stroke="var(--grid-color)" />
                     <XAxis 
                     dataKey="date" 
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: 12, fill: "var(--text-color)" }}
                     tickMargin={10}
                     />
                     <YAxis 
                     yAxisId="left"
-                    label={{ value: 'Questions', angle: -90, position: 'insideLeft', offset: 0 }}
+                    label={{ value: 'Questions', angle: -90, position: 'insideLeft', offset: 0, fill: "var(--text-color)" }}
                     domain={[0, 'auto']}
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: 12, fill: "var(--text-color)" }}
                     />
                     <YAxis 
                     yAxisId="right" 
                     orientation="right"
-                    label={{ value: 'Accuracy %', angle: 90, position: 'insideRight', offset: 0 }}
+                    label={{ value: 'Accuracy %', angle: 90, position: 'insideRight', offset: 0, fill: "var(--text-color)" }}
                     domain={[0, 100]}
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: 12, fill: "var(--text-color)" }}
                     />
                     <Tooltip 
                     formatter={(value, name) => {
@@ -211,6 +211,15 @@ const DailyProgressGraph: React.FC<ProgressDashboardProps> = ({
                       return [`${value}%`, name];
                       }
                       return [value, name];
+                    }}
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      color: 'var(--foreground)'
+                    }}
+                    labelStyle={{
+                      color: 'var(--foreground)'
                     }}
                     />
                     <Bar
@@ -236,24 +245,24 @@ const DailyProgressGraph: React.FC<ProgressDashboardProps> = ({
                 <div className="w-full aspect-[4/3] sm:aspect-[16/9]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={trendData} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} stroke="var(--grid-color)" />
                       <XAxis 
                       dataKey="date" 
-                      tick={{ fontSize: 12 }}
+                      tick={{ fontSize: 12, fill: "var(--text-color)" }}
                       tickMargin={10}
                       />
                       <YAxis 
                       yAxisId="left"
-                      label={{ value: 'Avg. Questions', angle: -90, position: 'insideLeft', offset: 0 }}
+                      label={{ value: 'Avg. Questions', angle: -90, position: 'insideLeft', offset: 0, fill: "var(--text-color)" }}
                       domain={[0, 'auto']}
-                      tick={{ fontSize: 12 }}
+                      tick={{ fontSize: 12, fill: "var(--text-color)" }}
                       />
                       <YAxis 
                       yAxisId="right" 
                       orientation="right"
-                      label={{ value: 'Avg. Accuracy %', angle: 90, position: 'insideRight', offset: 0 }}
+                      label={{ value: 'Avg. Accuracy %', angle: 90, position: 'insideRight', offset: 0, fill: "var(--text-color)" }}
                       domain={[0, 100]}
-                      tick={{ fontSize: 12 }}
+                      tick={{ fontSize: 12, fill: "var(--text-color)" }}
                       />
                       <Tooltip 
                       formatter={(value, name) => {
@@ -261,6 +270,15 @@ const DailyProgressGraph: React.FC<ProgressDashboardProps> = ({
                         return [`${value}%`, name];
                         }
                         return [value, name];
+                      }}
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid var(--border)',
+                        borderRadius: '6px',
+                        color: 'var(--foreground)'
+                      }}
+                      labelStyle={{
+                        color: 'var(--foreground)'
                       }}
                       />
                       <Line

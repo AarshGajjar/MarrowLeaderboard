@@ -72,7 +72,7 @@ const UserStatsRadarChart: React.FC<RadarChartProps> = ({ user1, user2, isOpen, 
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] max-w-md p-0 max-h-[90vh] overflow-y-auto">
         <DialogHeader className="p-4 pb-0">
-          <DialogTitle className="text-xl font-semibold text-gray-800">
+            <DialogTitle className="text-xl font-semibold text-purple-600 text-center">
             {user1.name} VS {user2.name}
           </DialogTitle>
         </DialogHeader>
@@ -86,14 +86,14 @@ const UserStatsRadarChart: React.FC<RadarChartProps> = ({ user1, user2, isOpen, 
                 margin={{ top: -10, right: -20, bottom: -20, left: -20 }}
               >
                 <PolarGrid
-                  stroke="#e0e0e0"
+                  stroke="hsl(var(--muted-foreground))"
                   strokeWidth={0.5}
                   strokeDasharray="3 3"
                 />
                 <PolarAngleAxis
                   dataKey="subject"
                   tick={{ 
-                    fill: '#666', 
+                    fill: 'hsl(var(--foreground))', 
                     fontSize: 11,
                     fontWeight: 500,
                     textAnchor: 'middle',
@@ -103,26 +103,27 @@ const UserStatsRadarChart: React.FC<RadarChartProps> = ({ user1, user2, isOpen, 
                 <Radar
                   name={user1.name}
                   dataKey={user1.name}
-                  stroke="#3b82f6"
-                  fill="#3b82f6"
+                  stroke="#8b5cf6"
+                  fill="#8b5cf6"
                   fillOpacity={0.2}
                   strokeWidth={2}
                 />
                 <Radar
                   name={user2.name}
                   dataKey={user2.name}
-                  stroke="#8b5cf6"
-                  fill="#8b5cf6"
+                  stroke="#3b82f6"
+                  fill="#3b82f6"
                   fillOpacity={0.2}
                   strokeWidth={2}
                 />
                 <Tooltip
                   cursor={false}
                   contentStyle={{
-                    backgroundColor: 'white',
-                    border: '1px solid #e5e7eb',
+                    backgroundColor: 'hsl(var(--background))',
+                    border: '1px solid hsl(var(--border))',
                     borderRadius: '8px',
                     padding: '8px 12px',
+                    color: 'hsl(var(--foreground))'
                   }}
                   formatter={(value: number, name: string, props: any) => {
                     const metric = props.payload.subject;
@@ -145,10 +146,10 @@ const UserStatsRadarChart: React.FC<RadarChartProps> = ({ user1, user2, isOpen, 
 
           {/* User Stats */}
           <div className="grid grid-cols-2 gap-4">
-            <Card className="bg-gray-50">
+            <Card className="bg-background">
               <CardContent className="p-4">
-                <h3 className="font-medium text-gray-600 mb-2">{user1.name}</h3>
-                <div className="space-y-1 text-xs">
+                <h3 className="font-medium text-foreground/80 mb-2">{user1.name}</h3>
+                <div className="space-y-1 text-xs text-foreground/70">
                   <p>Total: {user1.total}</p>
                   <p>Correct: {user1.correct}</p>
                   <p>Accuracy: {user1.accuracy.toFixed(1)}%</p>
@@ -158,10 +159,10 @@ const UserStatsRadarChart: React.FC<RadarChartProps> = ({ user1, user2, isOpen, 
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-gray-50">
+            <Card className="bg-background">
               <CardContent className="p-4">
-                <h3 className="font-medium text-gray-600 mb-2">{user2.name}</h3>
-                <div className="space-y-1 text-xs">
+                <h3 className="font-medium text-foreground/80 mb-2">{user2.name}</h3>
+                <div className="space-y-1 text-xs text-foreground/70">
                   <p>Total: {user2.total}</p>
                   <p>Correct: {user2.correct}</p>
                   <p>Accuracy: {user2.accuracy.toFixed(1)}%</p>

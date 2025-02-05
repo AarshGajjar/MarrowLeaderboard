@@ -1,14 +1,12 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Crosshair, Award, Check, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '../lib/supabase';
-import CountdownTimer from './ui/Countdown';
-import imgSrc from '@/assets/marrow.png';
 import StatsComparison from './functionality/StatsComparision';
 import DualUserProgress from './functionality/EnhancedProgress';
 import ActivityLogs from './functionality/ActivityLogs';
+import { Toaster } from 'sonner';
 const DAILY_TARGET = 200;
 // Utility functions
 const calculateAccuracy = (correct, total) => {
@@ -312,7 +310,12 @@ const QBankTracker = () => {
         fetchData();
         fetchDailyProgress();
     }, []);
-    return (_jsxs(Card, { className: "w-full max-w-xl bg-gradient-to-br from-slate-50 to-slate-100 shadow-lg", children: [_jsxs(CardHeader, { className: "space-y-1", children: [_jsx("div", { className: "flex justify-center", children: _jsx("img", { src: imgSrc, alt: "Marrow Logo", className: "w-12 h-12" }) }), _jsx(CardTitle, { className: "text-2xl text-center font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent", children: "Marrow QBank Challenge" })] }), _jsxs(CardContent, { className: "space-y-6", children: [_jsx(CountdownTimer, {}), showAlert.visible && (_jsx(StatusAlert, { message: showAlert.message, type: showAlert.type, onClose: () => setShowAlert(prev => ({ ...prev, visible: false })) })), _jsx(StatsComparison, { stats: state.stats, onUpdateProgress: handleSubmit, dailyData: dailyProgress, activityLogs: activityLogs }), _jsx(DualUserProgress, { user1: {
+    const LeftColumn = () => (_jsxs("div", { className: "space-y-6", children: [showAlert.visible && (_jsx(StatusAlert, { message: showAlert.message, type: showAlert.type, onClose: () => setShowAlert(prev => ({ ...prev, visible: false })) })), _jsx(StatsComparison, { stats: state.stats, onUpdateProgress: handleSubmit, dailyData: dailyProgress, activityLogs: activityLogs })] }));
+    const RightColumn = () => (_jsx("div", { className: "space-y-6", children: _jsx(ActivityLogs, { logs: activityLogs, userNames: {
+                user1: state.stats.user1.name,
+                user2: state.stats.user2.name
+            }, onRefresh: refreshData }) }));
+    return (_jsxs(_Fragment, { children: [_jsx(Toaster, { position: "top-center", richColors: true, expand: true, closeButton: true }), _jsxs("div", { className: "lg:hidden space-y-6", children: [showAlert.visible && (_jsx(StatusAlert, { message: showAlert.message, type: showAlert.type, onClose: () => setShowAlert(prev => ({ ...prev, visible: false })) })), _jsx(StatsComparison, { stats: state.stats, onUpdateProgress: handleSubmit, dailyData: dailyProgress, activityLogs: activityLogs }), _jsx(DualUserProgress, { user1: {
                             name: state.stats.user1.name,
                             current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user1Completed : 0,
                             color: "#2563eb"
@@ -320,12 +323,20 @@ const QBankTracker = () => {
                             name: state.stats.user2.name,
                             current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user2Completed : 0,
                             color: "#7242eb"
-                        }, target: DAILY_TARGET }), _jsx("div", { className: "border rounded-lg overflow-hidden", children: _jsx(ActivityLogs, { logs: activityLogs, userNames: {
-                                user1: state.stats.user1.name,
-                                user2: state.stats.user2.name
-                            }, onRefresh: refreshData }) })] })] }));
+                        }, target: DAILY_TARGET }), _jsx(ActivityLogs, { logs: activityLogs, userNames: {
+                            user1: state.stats.user1.name,
+                            user2: state.stats.user2.name
+                        }, onRefresh: refreshData })] }), _jsxs("div", { className: "hidden lg:flex flex-col gap-6 w-full", children: [_jsxs("div", { className: "grid grid-cols-2 gap-6", children: [_jsx(StatsComparison, { stats: state.stats, onUpdateProgress: handleSubmit, dailyData: dailyProgress, activityLogs: activityLogs }), _jsx(ActivityLogs, { logs: activityLogs, userNames: {
+                                    user1: state.stats.user1.name,
+                                    user2: state.stats.user2.name
+                                }, onRefresh: refreshData })] }), _jsx(DualUserProgress, { user1: {
+                            name: state.stats.user1.name,
+                            current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user1Completed : 0,
+                            color: "#2563eb"
+                        }, user2: {
+                            name: state.stats.user2.name,
+                            current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user2Completed : 0,
+                            color: "#7242eb"
+                        }, target: DAILY_TARGET })] })] }));
 };
 export default QBankTracker;
-function setShowAlert(arg0) {
-    throw new Error('Function not implemented.');
-}

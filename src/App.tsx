@@ -1,10 +1,13 @@
 import QBankTracker from './components/QBankTracker'
+import DashboardLayout from './components/functionality/DashboardLayout'
 
 function App() {
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-      <QBankTracker />
-    </div>
+    <DashboardLayout>
+      <div className="lg:col-span-12">
+        <QBankTracker />
+      </div>
+    </DashboardLayout>
   )
 }
 

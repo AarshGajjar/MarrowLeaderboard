@@ -140,14 +140,14 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
 
     return (
       <div className="relative w-80 h-80 mx-auto">
-        <div className="absolute inset-0 rounded-full border-4 border-gray-200">
+        <div className="absolute inset-0 rounded-full border-4 border-gray-200 dark:border-gray-700">
           {indicators.map((indicator) => {
             const activityScale = indicator.activity / maxActivity;
             const accuracyColor = indicator.accuracy >= 70 
-              ? 'bg-green-500' 
+              ? 'bg-green-500 dark:bg-green-400' 
               : indicator.accuracy >= 50 
-                ? 'bg-yellow-500' 
-                : 'bg-red-500';
+                ? 'bg-yellow-500 dark:bg-yellow-400' 
+                : 'bg-red-500 dark:bg-red-400';
 
             return (
               <div
@@ -176,23 +176,24 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
           {/* Updated clock numbers */}
           {[0, 3, 6, 9, 12, 15, 18, 21].map((hour) => {
             const angle = hour * 15;
-            const radius = 140; // Increased radius for label placement
             const x = 50 + 42 * Math.sin(angle * Math.PI / 180);
             const y = 50 - 42 * Math.cos(angle * Math.PI / 180);
             
             return (
               <div
                 key={hour}
-                className="absolute text-xxs font-medium text-gray-600 transform -translate-x-1/2 -translate-y-1/2"
+                className="absolute text-xxs font-medium text-gray-600 dark:text-gray-300 transform -translate-x-1/2 -translate-y-1/2"
                 style={{
                   left: `${x}%`,
                   top: `${y}%`,
-                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  backgroundColor: 'var(--tw-bg-opacity)',
                   padding: '2px 4px',
-                  borderRadius: '1px',
+                  borderRadius: '2px',
                 }}
               >
-                {`${hour === 0 ? '12' : hour > 12 ? hour - 12 : hour}${hour < 12 ? 'AM' : 'PM'}`}
+                <span className="bg-white dark:bg-gray-800 px-1 py-0.5 rounded">
+                  {`${hour === 0 ? '12' : hour > 12 ? hour - 12 : hour}${hour < 12 ? 'AM' : 'PM'}`}
+                </span>
               </div>
             );
           })}
@@ -231,22 +232,22 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
                 if (!payload?.length) return null;
                 const data = payload[0].payload;
                 return (
-                  <div className="bg-white p-4 shadow-lg rounded-lg border border-gray-100">
-                    <p className="font-semibold text-gray-800 mb-2">
+                  <div className="bg-white dark:bg-gray-800 p-4 shadow-lg rounded-lg border border-gray-100 dark:border-gray-700">
+                    <p className="font-semibold text-gray-800 dark:text-gray-200 mb-2">
                       {new Date(data.timestamp).toLocaleTimeString()}
                     </p>
                     <div className="space-y-1">
                       <div className="flex justify-between gap-4">
-                        <span className="text-violet-600">Accuracy:</span>
-                        <span className="font-medium">{data.y}%</span>
+                        <span className="text-violet-600 dark:text-violet-400">Accuracy:</span>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">{data.y}%</span>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <span className="text-violet-400">Correct:</span>
-                        <span className="font-medium">{data.correct}</span>
+                        <span className="text-violet-400 dark:text-violet-300">Correct:</span>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">{data.correct}</span>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <span className="text-gray-500">Total:</span>
-                        <span className="font-medium">{data.completed}</span>
+                        <span className="text-gray-500 dark:text-gray-400">Total:</span>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">{data.completed}</span>
                       </div>
                     </div>
                   </div>
@@ -306,20 +307,20 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
               if (!payload?.length) return null;
               const data = payload[0].payload;
               return (
-                <div className="bg-white p-4 shadow-lg rounded-lg border border-gray-100">
-                  <p className="font-semibold text-gray-800 mb-2">{data.hour} hrs</p>
+                <div className="bg-white dark:bg-gray-800 p-4 shadow-lg rounded-lg border border-gray-100 dark:border-gray-700">
+                  <p className="font-semibold text-gray-800 dark:text-gray-200 mb-2">{data.hour} hrs</p>
                   <div className="space-y-1">
                     <div className="flex justify-between gap-4">
-                      <span className="text-violet-600">Accuracy:</span>
-                      <span className="font-medium">{data.accuracy}%</span>
+                      <span className="text-violet-600 dark:text-violet-400">Accuracy:</span>
+                      <span className="font-medium text-gray-700 dark:text-gray-300">{data.accuracy}%</span>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <span className="text-violet-400">Questions:</span>
-                      <span className="font-medium">{data.totalQuestions}</span>
+                      <span className="text-violet-400 dark:text-violet-300">Questions:</span>
+                      <span className="font-medium text-gray-700 dark:text-gray-300">{data.totalQuestions}</span>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <span className="text-gray-500">Sessions:</span>
-                      <span className="font-medium">{data.attempts}</span>
+                      <span className="text-gray-500 dark:text-gray-400">Sessions:</span>
+                      <span className="font-medium text-gray-700 dark:text-gray-300">{data.attempts}</span>
                     </div>
                   </div>
                 </div>
@@ -352,8 +353,8 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
     <div className="w-full">
       <div className="flex flex-wrap gap-4 justify-between items-center mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">Performance by 3-Hour Intervals</h3>
-          <p className="text-sm text-gray-500">Accuracy trends and activity patterns</p>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Performance by 3-Hour Intervals</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Accuracy trends and activity patterns</p>
         </div>
         <div className="flex gap-4 items-center">
           <div className="flex gap-2">
@@ -361,8 +362,8 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
               onClick={() => setViewType('chart')}
               className={`px-3 py-1 rounded-md text-sm ${
                 viewType === 'chart' 
-                  ? 'bg-violet-600 text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-violet-600 text-white dark:bg-violet-500' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
               }`}
             >
               Chart
@@ -371,8 +372,8 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
               onClick={() => setViewType('scatter')}
               className={`px-3 py-1 rounded-md text-sm ${
                 viewType === 'scatter' 
-                  ? 'bg-violet-600 text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-violet-600 text-white dark:bg-violet-500' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
               }`}
             >
               Scatter
@@ -381,22 +382,12 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
               onClick={() => setViewType('clock')}
               className={`px-3 py-1 rounded-md text-sm ${
                 viewType === 'clock' 
-                  ? 'bg-violet-600 text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-violet-600 text-white dark:bg-violet-500' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
               }`}
             >
               Clock
             </button>
-          </div>
-          <div className="flex gap-4 text-sm hidden sm:flex">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-violet-600 rounded-full" />
-              <span className="text-gray-600">Accuracy</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-violet-200 rounded" />
-              <span className="text-gray-600">Volume</span>
-            </div>
           </div>
         </div>
       </div>
@@ -408,17 +399,17 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
       {(peakPeriod.accuracy > 0 || lowPeriod.accuracy < 100) && (
         <div className="flex gap-4 justify-end">
           {peakPeriod.accuracy > 0 && (
-            <div className="bg-green-50 px-3 py-2 rounded-lg text-sm">
-              <span className="text-green-700 font-medium">Peak: </span>
-              <span className="text-green-600">
+            <div className="bg-green-50 dark:bg-green-900/30 px-3 py-2 rounded-lg text-sm">
+              <span className="text-green-700 dark:text-green-400 font-medium">Peak: </span>
+              <span className="text-green-600 dark:text-green-300">
                 {peakPeriod.hour} ({peakPeriod.accuracy}%)
               </span>
             </div>
           )}
           {lowPeriod.accuracy < 100 && (
-            <div className="bg-red-50 px-3 py-2 rounded-lg text-sm">
-              <span className="text-red-700 font-medium">Low: </span>
-              <span className="text-red-600">
+            <div className="bg-red-50 dark:bg-red-900/30 px-3 py-2 rounded-lg text-sm">
+              <span className="text-red-700 dark:text-red-400 font-medium">Low: </span>
+              <span className="text-red-600 dark:text-red-300">
                 {lowPeriod.hour} ({lowPeriod.accuracy}%)
               </span>
             </div>

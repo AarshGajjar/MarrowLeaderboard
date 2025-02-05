@@ -1,0 +1,6 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import imgsrc from '@/assets/marrow.png';
+const LeaderboardHeader = () => {
+    return (_jsx("div", { className: "w-full p-6", children: _jsxs("div", { className: "relative flex items-center justify-center", children: [_jsx("div", { className: "absolute inset-0 bg-gradient-to-r from-purple-600/5 via-blue-600/5 to-purple-600/5 rounded-lg blur-xl" }), _jsxs("div", { className: "relative flex items-center gap-4 px-8 py-4 \r\n                      bg-gradient-to-br from-white/80 via-white/90 to-white/80 \r\n                      dark:from-slate-900/80 dark:via-slate-900/90 dark:to-slate-900/80 \r\n                      rounded-lg backdrop-blur-sm \r\n                      border border-white/20 dark:border-slate-800/20 \r\n                      shadow-lg transition-all duration-300", children: [_jsx("img", { src: imgsrc, alt: "marrow", className: "w-12 h-12" }), _jsx("h1", { className: "text-2xl font-semibold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent", children: "QBank Challenge" })] }), _jsx("div", { className: "absolute inset-0 bg-gradient-to-r from-blue-500/0 via-purple-500/10 to-blue-500/0 \r\n                      rounded-lg opacity-0 hover:opacity-100 transition-opacity duration-500" })] }) }));
+};
+export default LeaderboardHeader;

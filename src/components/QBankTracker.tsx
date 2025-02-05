@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Crosshair, Award, Check, AlertCircle, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '../lib/supabase';
-import CountdownTimer from './ui/Countdown';
-import imgSrc from '@/assets/marrow.png';
 import StatsComparison from './functionality/StatsComparision';
 import DualUserProgress from './functionality/EnhancedProgress';
 import  ActivityLogs from './functionality/ActivityLogs';
+import { Toaster } from 'sonner';
 
 // Type definitions
 interface UserStats {
@@ -507,17 +506,46 @@ const QBankTracker: React.FC = () => {
     fetchDailyProgress();
   }, []);
 
+  const LeftColumn = () => (
+    <div className="space-y-6">
+      {showAlert.visible && (
+        <StatusAlert
+          message={showAlert.message}
+          type={showAlert.type}
+          onClose={() => setShowAlert(prev => ({ ...prev, visible: false }))}
+        />
+      )}
+      <StatsComparison
+        stats={state.stats}
+        onUpdateProgress={handleSubmit}
+        dailyData={dailyProgress}
+        activityLogs={activityLogs}
+      />
+    </div>
+  );
+
+  const RightColumn = () => (
+    <div className="space-y-6">
+      <ActivityLogs
+        logs={activityLogs}
+        userNames={{
+          user1: state.stats.user1.name,
+          user2: state.stats.user2.name
+        }}
+        onRefresh={refreshData}
+      />
+    </div>
+  );
+
   return (
-    <Card className="w-full max-w-xl bg-gradient-to-br from-slate-50 to-slate-100 shadow-lg">
-      <CardHeader className="space-y-1">
-        <div className="flex justify-center">
-          <img src={imgSrc} alt="Marrow Logo" className="w-12 h-12" />
-        </div>
-        <CardTitle className="text-2xl text-center font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-          Marrow QBank Challenge
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6"><CountdownTimer />
+    <>
+      <Toaster 
+        position="top-center" 
+        richColors 
+        expand 
+        closeButton 
+      />
+      <div className="lg:hidden space-y-6">
         {showAlert.visible && (
           <StatusAlert
             message={showAlert.message}
@@ -525,47 +553,69 @@ const QBankTracker: React.FC = () => {
             onClose={() => setShowAlert(prev => ({ ...prev, visible: false }))}
           />
         )}
-
         <StatsComparison
           stats={state.stats}
           onUpdateProgress={handleSubmit}
           dailyData={dailyProgress}
           activityLogs={activityLogs}
         />
-
-        {/* Daily progress section */}
         <DualUserProgress
           user1={{
-            name:state.stats.user1.name,
+            name: state.stats.user1.name,
             current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user1Completed : 0,
             color: "#2563eb"
           }}
           user2={{
-            name:state.stats.user2.name, 
+            name: state.stats.user2.name,
             current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user2Completed : 0,
             color: "#7242eb"
           }}
           target={DAILY_TARGET}
         />
+        <ActivityLogs
+          logs={activityLogs}
+          userNames={{
+            user1: state.stats.user1.name,
+            user2: state.stats.user2.name
+          }}
+          onRefresh={refreshData}
+        />
+      </div>
 
-        {/* Activity Logs Section */}
-        <div className="border rounded-lg overflow-hidden">
+      {/* Desktop layout */}
+      <div className="hidden lg:flex flex-col gap-6 w-full">
+        <div className="grid grid-cols-2 gap-6">
+          <StatsComparison
+            stats={state.stats}
+            onUpdateProgress={handleSubmit}
+            dailyData={dailyProgress}
+            activityLogs={activityLogs}
+          />
           <ActivityLogs
-              logs={activityLogs}
-              userNames={{
-                user1: state.stats.user1.name,
-                user2: state.stats.user2.name
-              }}
-              onRefresh={refreshData}
-            />
+            logs={activityLogs}
+            userNames={{
+              user1: state.stats.user1.name,
+              user2: state.stats.user2.name
+            }}
+            onRefresh={refreshData}
+          />
         </div>
-      </CardContent>
-    </Card>
+        <DualUserProgress
+          user1={{
+            name: state.stats.user1.name,
+            current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user1Completed : 0,
+            color: "#2563eb"
+          }}
+          user2={{
+            name: state.stats.user2.name,
+            current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user2Completed : 0,
+            color: "#7242eb"
+          }}
+          target={DAILY_TARGET}
+        />
+      </div>
+    </>
   );
 };
 
 export default QBankTracker;
-
-function setShowAlert(arg0: { message: string; type: string; visible: boolean; }) {
-  throw new Error('Function not implemented.');
-}
