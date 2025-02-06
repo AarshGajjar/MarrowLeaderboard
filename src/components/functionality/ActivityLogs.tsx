@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Clock, RefreshCw, List, Bell, BellOff } from 'lucide-react';
+import marrowIcon from '@/assets/marrow.png';
 
 interface ActivityLog {
   id: number;
@@ -75,22 +76,70 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
     end: getCurrentDate()
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'clock' | 'list'>('clock');
+  const [activeTab, setActiveTab] = useState<'clock' | 'list'>('list');
   const [selectedUsers, setSelectedUsers] = useState<('user1' | 'user2')[]>(['user1', 'user2']);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [notifications, setNotifications] = useState<NotificationState>(() => {
     const saved = localStorage.getItem('activityLogNotifications');
     return saved ? JSON.parse(saved) : { enabled: false, lastSeenLogId: 0 };
   });
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [lastRefreshAttempt, setLastRefreshAttempt] = useState<number>(Date.now());
+  const MINIMUM_REFRESH_INTERVAL = 5000; // 5 seconds minimum between refreshes
 
-  // Add auto-refresh effect
+  // Replace the existing auto-refresh effect with this improved version
   useEffect(() => {
-    const interval = setInterval(() => {
-      onRefresh();
-    }, 3); // Refresh every 3 seconds
+    const handleRefresh = async () => {
+      const now = Date.now();
+      if (now - lastRefreshAttempt < MINIMUM_REFRESH_INTERVAL) {
+        return; // Skip if too soon since last attempt
+      }
 
-    return () => clearInterval(interval);
-  }, [onRefresh]);
+      setLastRefreshAttempt(now);
+      try {
+        setRefreshError(null);
+        await onRefresh();
+      } catch (error) {
+        console.error('Refresh failed:', error);
+        setRefreshError('Failed to refresh data. Will retry shortly.');
+        // Exponential backoff could be implemented here if needed
+      }
+    };
+
+    // Only set up auto-refresh if we're viewing today's data
+    const isViewingToday = dateRange.start === getCurrentDate() && !isRangeMode;
+    
+    let interval: NodeJS.Timeout;
+    if (isViewingToday) {
+      interval = setInterval(handleRefresh, 30000); // Reduced to every 30 seconds
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [onRefresh, dateRange.start, isRangeMode, lastRefreshAttempt]);
+
+  // Modify the manual refresh handler
+  const handleRefresh = async () => {
+    const now = Date.now();
+    if (now - lastRefreshAttempt < MINIMUM_REFRESH_INTERVAL) {
+      return; // Prevent rapid manual refreshes
+    }
+
+    setIsRefreshing(true);
+    setLastRefreshAttempt(now);
+    try {
+      setRefreshError(null);
+      await onRefresh();
+    } catch (error) {
+      console.error('Manual refresh failed:', error);
+      setRefreshError('Failed to refresh data. Please try again later.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Update filtering to handle both single day and range modes
   const filteredLogs = logs.filter(log => {
@@ -148,15 +197,6 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
     user2: { completed: 0, correct: 0 }
   });
   
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await onRefresh();
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
   const getLogPosition = (timestamp: string) => {
     const date = new Date(timestamp);
     const hours = date.getHours();
@@ -280,7 +320,7 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
     try {
       new Notification('QBank Activity', {
         body: `${userName} completed ${log.completed} questions with ${log.correct} correct`,
-        icon: '/favicon.ico', // Add your app icon if available
+        icon: marrowIcon,
         tag: 'qbank-activity', // Prevents duplicate notifications
       });
     } catch (error) {
@@ -361,6 +401,11 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
             </Button>
           </div>
         </div>
+        {refreshError && (
+          <div className="mt-2 text-sm text-red-500 dark:text-red-400">
+            {refreshError}
+          </div>
+        )}
       </CardHeader>
       
       <CardContent className="p-4 space-y-4">
@@ -477,155 +522,157 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
         ))}
 
         {activeTab === 'clock' && (
-          <div className="p-4">
-            <TooltipProvider>
-              <svg viewBox="-1.2 -1.2 2.4 2.4" className="w-full max-w-xs mx-auto">
-                <circle cx="0" cy="0" r="1" fill="none" stroke="rgb(203 213 225)" strokeWidth="0.05" />
+          <div className="p-4 flex justify-center">
+            <div className="w-full aspect-square max-w-[400px]">
+              <TooltipProvider>
+                <svg viewBox="-1.2 -1.2 2.4 2.4" className="w-full h-full">
+                  <circle cx="0" cy="0" r="1" fill="none" stroke="rgb(203 213 225)" strokeWidth="0.05" />
                 
-                {/* 24-hour markers */}
-                {[...Array(24)].map((_, i) => {
-                  const angle = (i * 15 - 90) * (Math.PI / 180);
-                  return (
-                    <line
-                      key={i}
-                      x1={Math.cos(angle) * 0.9}
-                      y1={Math.sin(angle) * 0.9}
-                      x2={Math.cos(angle) * 1}
-                      y2={Math.sin(angle) * 1}
-                      stroke="hsl(var(--muted-foreground))"
-                      strokeWidth={i % 6 === 0 ? "0.04" : "0.02"}
-                    />
-                  );
-                })}
-
-                {/* Add current time indicator */}
-                {(() => {
-                  const { x, y } = getCurrentTimePosition();
-                  const currentTimeString = currentTime.toLocaleTimeString('en-IN', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false
-                  });
-                  return (
-                    <g>
-                      {/* Hour hand shadow for depth effect */}
+                  {/* 24-hour markers */}
+                  {[...Array(24)].map((_, i) => {
+                    const angle = (i * 15 - 90) * (Math.PI / 180);
+                    return (
                       <line
-                        x1="0"
-                        y1="0"
-                        x2={x * 0.7}
-                        y2={y * 0.7}
-                        stroke="rgba(0, 0, 0, 0.2)"
-                        strokeWidth="0.04"
-                        strokeLinecap="round"
-                        transform="translate(0.01, 0.01)"
+                        key={i}
+                        x1={Math.cos(angle) * 0.9}
+                        y1={Math.sin(angle) * 0.9}
+                        x2={Math.cos(angle) * 1}
+                        y2={Math.sin(angle) * 1}
+                        stroke="hsl(var(--muted-foreground))"
+                        strokeWidth={i % 6 === 0 ? "0.04" : "0.02"}
                       />
-                      {/* Hour hand */}
-                      <line
-                        x1="0"
-                        y1="0"
-                        x2={x * 0.7}
-                        y2={y * 0.7}
-                        stroke="hsl(var(--primary))"
-                        strokeWidth="0.04"
-                        strokeLinecap="round"
-                        className="transition-transform duration-1000 ease-linear"
-                      />
-                      {/* Time text */}
-                      <text
-                        x={0}
-                        y={-1.1}
-                        textAnchor="middle"
-                        alignmentBaseline="middle"
-                        fill="hsl(var(--primary))"
-                        fontSize="0.12"
-                        className="font-medium"
-                      >
-                        {currentTimeString}
-                      </text>
-                      {/* Center dot overlay */}
-                      <circle 
-                        cx="0" 
-                        cy="0" 
-                        r="0.06" 
-                        fill="hsl(var(--primary))"
-                        className="animate-pulse"
-                      />
-                    </g>
-                  );
-                })()}
+                    );
+                  })}
 
-                {/* Dynamic heatmap calculation */}
-                {timeSlots.map((slot, index) => {
-                  const startAngleDeg = index * 45 - 90; // 45° per slot
-                  const endAngleDeg = (index + 1) * 45 - 90;
-                  const startAngleRad = startAngleDeg * (Math.PI / 180);
-                  const endAngleRad = endAngleDeg * (Math.PI / 180);
-
-                  const startX = 0.9 * Math.cos(startAngleRad);
-                  const startY = 0.9 * Math.sin(startAngleRad);
-                  const endX = 0.9 * Math.cos(endAngleRad);
-                  const endY = 0.9 * Math.sin(endAngleRad);
-
-                  // Calculate the accuracy and intensity based on the slot's data
-                  const accuracy = slot.total > 0 ? slot.correct / slot.total : 0;
-                  const intensity = slot.total > 0 ? (slot.total / maxTotal) : 0;
-
-                  return (
-                    <Tooltip key={index}>
-                      <TooltipTrigger asChild>
-                        <path
-                          d={`M 0 0 L ${startX} ${startY} A 0.9 0.9 0 0 1 ${endX} ${endY} Z`}
-                          fill={slot.total > 0 ? "url(#gradient)" : "transparent"}
-                          fillOpacity={intensity * 0.3}
-                          stroke="none"
-                          className="cursor-pointer hover:fill-opacity-50 transition-all"
+                  {/* Add current time indicator */}
+                  {(() => {
+                    const { x, y } = getCurrentTimePosition();
+                    const currentTimeString = currentTime.toLocaleTimeString('en-IN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: false
+                    });
+                    return (
+                      <g>
+                        {/* Hour hand shadow for depth effect */}
+                        <line
+                          x1="0"
+                          y1="0"
+                          x2={x * 0.7}
+                          y2={y * 0.7}
+                          stroke="rgba(0, 0, 0, 0.2)"
+                          strokeWidth="0.04"
+                          strokeLinecap="round"
+                          transform="translate(0.01, 0.01)"
                         />
-                      </TooltipTrigger>
-                      <TooltipContent side="right" className="p-2 space-y-1">
-                        <p className="font-medium">{formatTimeRange(index)}</p>
-                        <div className="space-y-0.5 text-sm">
-                          <p>Total Questions: {slot.total}</p>
-                          <p>Correct Answers: {slot.correct}</p>
-                          <p>Accuracy: {calculateAccuracy(slot.correct, slot.total)}%</p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
+                        {/* Hour hand */}
+                        <line
+                          x1="0"
+                          y1="0"
+                          x2={x * 0.7}
+                          y2={y * 0.7}
+                          stroke="hsl(var(--primary))"
+                          strokeWidth="0.04"
+                          strokeLinecap="round"
+                          className="transition-transform duration-1000 ease-linear"
+                        />
+                        {/* Time text */}
+                        <text
+                          x={0}
+                          y={-1.1}
+                          textAnchor="middle"
+                          alignmentBaseline="middle"
+                          fill="hsl(var(--primary))"
+                          fontSize="0.12"
+                          className="font-medium"
+                        >
+                          {currentTimeString}
+                        </text>
+                        {/* Center dot overlay */}
+                        <circle 
+                          cx="0" 
+                          cy="0" 
+                          r="0.06" 
+                          fill="hsl(var(--primary))"
+                          className="animate-pulse"
+                        />
+                      </g>
+                    );
+                  })()}
 
-                <defs>
-                  <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="rgb(147 51 234)" />
-                    <stop offset="100%" stopColor="rgb(37 99 235)" />
-                  </linearGradient>
-                </defs>
+                  {/* Dynamic heatmap calculation */}
+                  {timeSlots.map((slot, index) => {
+                    const startAngleDeg = index * 45 - 90; // 45° per slot
+                    const endAngleDeg = (index + 1) * 45 - 90;
+                    const startAngleRad = startAngleDeg * (Math.PI / 180);
+                    const endAngleRad = endAngleDeg * (Math.PI / 180);
 
-                {/* Update log markers to use primary/secondary colors */}
-                {filteredLogs.map((log) => {
-                  const { x, y } = getLogPosition(log.timestamp);
-                  
-                  return (
-                    <g key={log.id} transform={`translate(${x}, ${y})`}>
-                      <circle
-                        r="0.05"
-                        fill={log.user_type === 'user1' ? 'rgb(147 51 234)' : 'rgb(37 99 235)'}
-                        stroke="hsl(var(--background))"
-                        strokeWidth="0.01"
-                      />
-                      <title>
-                        {`${log.user_type === 'user1' ? userNames.user1 : userNames.user2}
+                    const startX = 0.9 * Math.cos(startAngleRad);
+                    const startY = 0.9 * Math.sin(startAngleRad);
+                    const endX = 0.9 * Math.cos(endAngleRad);
+                    const endY = 0.9 * Math.sin(endAngleRad);
+
+                    // Calculate the accuracy and intensity based on the slot's data
+                    const accuracy = slot.total > 0 ? slot.correct / slot.total : 0;
+                    const intensity = slot.total > 0 ? (slot.total / maxTotal) : 0;
+
+                    return (
+                      <Tooltip key={index}>
+                        <TooltipTrigger asChild>
+                          <path
+                            d={`M 0 0 L ${startX} ${startY} A 0.9 0.9 0 0 1 ${endX} ${endY} Z`}
+                            fill={slot.total > 0 ? "url(#gradient)" : "transparent"}
+                            fillOpacity={intensity * 0.3}
+                            stroke="none"
+                            className="cursor-pointer hover:fill-opacity-50 transition-all"
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="p-2 space-y-1">
+                          <p className="font-medium">{formatTimeRange(index)}</p>
+                          <div className="space-y-0.5 text-sm">
+                            <p>Total Questions: {slot.total}</p>
+                            <p>Correct Answers: {slot.correct}</p>
+                            <p>Accuracy: {calculateAccuracy(slot.correct, slot.total)}%</p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+
+                  <defs>
+                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="rgb(147 51 234)" />
+                      <stop offset="100%" stopColor="rgb(37 99 235)" />
+                    </linearGradient>
+                  </defs>
+
+                  {/* Update log markers to use primary/secondary colors */}
+                  {filteredLogs.map((log) => {
+                    const { x, y } = getLogPosition(log.timestamp);
+                    
+                    return (
+                      <g key={log.id} transform={`translate(${x}, ${y})`}>
+                        <circle
+                          r="0.05"
+                          fill={log.user_type === 'user1' ? 'rgb(147 51 234)' : 'rgb(37 99 235)'}
+                          stroke="hsl(var(--background))"
+                          strokeWidth="0.01"
+                        />
+                        <title>
+                          {`${log.user_type === 'user1' ? userNames.user1 : userNames.user2}
               Completed: ${log.completed}
               Correct: ${log.correct}
               Time: ${new Date(log.timestamp).toLocaleTimeString('en-IN', { hour12: false })}`}
-                      </title>
-                    </g>
-                  );
-                })}
+                        </title>
+                      </g>
+                    );
+                  })}
 
-                <circle cx="0" cy="0" r="0.05" fill="hsl(var(--foreground))" />
-              </svg>
-            </TooltipProvider>
+                  <circle cx="0" cy="0" r="0.05" fill="hsl(var(--foreground))" />
+                </svg>
+              </TooltipProvider>
+            </div>
           </div>
         )}
 
