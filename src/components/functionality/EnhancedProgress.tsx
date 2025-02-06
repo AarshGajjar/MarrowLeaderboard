@@ -8,14 +8,12 @@ interface DualUserProgressProps {
     name: string;
     current: number;
     color: string;
-    lastUpdated?: string; // ISO date string
   };
   user2: {
     previous?: number;
     name: string;
     current: number;
     color: string;
-    lastUpdated?: string; // ISO date string
   };
   target: number;
 }
@@ -23,27 +21,10 @@ interface DualUserProgressProps {
 const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1, user2, target }) => {
   const [hoveredUser, setHoveredUser] = useState<string | null>(null);
 
-  // Add utility function to check if date is from a previous day
-  const isFromPreviousDay = (dateStr?: string) => {
-    if (!dateStr) return true;
-    const lastUpdate = new Date(dateStr);
-    const now = new Date();
-    const lastMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    return lastUpdate < lastMidnight;
-  };
-
-  // Reset progress if it's from a previous day
-  const getCurrentProgress = (user: typeof user1) => {
-    return isFromPreviousDay(user.lastUpdated) ? 0 : user.current;
-  };
-
-  const effectiveUser1Progress = getCurrentProgress(user1);
-  const effectiveUser2Progress = getCurrentProgress(user2);
-
-  const getLeadingUser = () => effectiveUser1Progress >= effectiveUser2Progress ? user1.name : user2.name;
+  const getLeadingUser = () => user1.current >= user2.current ? user1.name : user2.name;
 
   // Calculate maxProgress considering target and both users' current values
-  const maxProgress = Math.max(effectiveUser1Progress, effectiveUser2Progress, target);
+  const maxProgress = Math.max(user1.current, user2.current, target);
 
   const getProgressStats = (current: number) => {
     const rawPercentage = (current / target) * 100;
@@ -59,8 +40,8 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1, user2, targe
     };
   };
 
-  const user1Stats = getProgressStats(effectiveUser1Progress);
-  const user2Stats = getProgressStats(effectiveUser2Progress);
+  const user1Stats = getProgressStats(user1.current);
+  const user2Stats = getProgressStats(user2.current);
 
   const getMotivationalMessage = () => {
     // Helper functions for cleaner code
@@ -68,8 +49,8 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1, user2, targe
     const formatPercentage = (value: number) => Math.round(value);
     
     // Calculate progress stats
-    const user1Progress = calculateProgress(effectiveUser1Progress, target);
-    const user2Progress = calculateProgress(effectiveUser2Progress, target);
+    const user1Progress = calculateProgress(user1.current, target);
+    const user2Progress = calculateProgress(user2.current, target);
     const differencePercentage = Math.abs(user1Progress - user2Progress);
     const isUser1Leading = user1Progress > user2Progress;
     const leader = isUser1Leading ? user1 : user2;
@@ -112,13 +93,13 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1, user2, targe
     }
   
     // Starting phase scenarios
-    if (effectiveUser1Progress === 0 && effectiveUser2Progress === 0) {
+    if (user1.current === 0 && user2.current === 0) {
       return `The stage is set for an epic challenge! ${user1.name} and ${user2.name}, your journey to greatness begins now! 🎬 Ready, set, go! 🚀`;
     }
   
-    if (effectiveUser1Progress === 0 || effectiveUser2Progress === 0) {
-      const starter = effectiveUser1Progress > 0 ? user1.name : user2.name;
-      const waiting = effectiveUser1Progress === 0 ? user1.name : user2.name;
+    if (user1.current === 0 || user2.current === 0) {
+      const starter = user1.current > 0 ? user1.name : user2.name;
+      const waiting = user1.current === 0 ? user1.name : user2.name;
       const starterProgress = formatPercentage(Math.max(user1Progress, user2Progress));
       
       if (starterProgress < 5) {
@@ -313,22 +294,20 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1, user2, targe
 
         <UserIndicator 
         {...user1}
-        current={effectiveUser1Progress}
         position={user1Stats.visualPosition}
         isTargetReached={user1Stats.isTargetReached}
         questionsLeft={user1Stats.questionsLeft}
         extraProgress={user1Stats.extraProgress}
-        isLeading={effectiveUser1Progress > effectiveUser2Progress}
+        isLeading={user1.current > user2.current}
         isFirstUser={true}
         />
         <UserIndicator 
         {...user2}
-        current={effectiveUser2Progress}
         position={user2Stats.visualPosition}
         isTargetReached={user2Stats.isTargetReached}
         questionsLeft={user2Stats.questionsLeft}
         extraProgress={user2Stats.extraProgress}
-        isLeading={effectiveUser2Progress > effectiveUser1Progress}
+        isLeading={user2.current > user1.current}
         isFirstUser={false}
         />
       </div>
