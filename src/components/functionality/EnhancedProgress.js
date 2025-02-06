@@ -4,9 +4,24 @@ import { Card, CardTitle, CardHeader, CardContent } from '@/components/ui/card';
 import { Crown, Rocket } from 'lucide-react';
 const DualUserProgress = ({ user1, user2, target }) => {
     const [hoveredUser, setHoveredUser] = useState(null);
-    const getLeadingUser = () => user1.current >= user2.current ? user1.name : user2.name;
+    // Add utility function to check if date is from a previous day
+    const isFromPreviousDay = (dateStr) => {
+        if (!dateStr)
+            return true;
+        const lastUpdate = new Date(dateStr);
+        const now = new Date();
+        const lastMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        return lastUpdate < lastMidnight;
+    };
+    // Reset progress if it's from a previous day
+    const getCurrentProgress = (user) => {
+        return isFromPreviousDay(user.lastUpdated) ? 0 : user.current;
+    };
+    const effectiveUser1Progress = getCurrentProgress(user1);
+    const effectiveUser2Progress = getCurrentProgress(user2);
+    const getLeadingUser = () => effectiveUser1Progress >= effectiveUser2Progress ? user1.name : user2.name;
     // Calculate maxProgress considering target and both users' current values
-    const maxProgress = Math.max(user1.current, user2.current, target);
+    const maxProgress = Math.max(effectiveUser1Progress, effectiveUser2Progress, target);
     const getProgressStats = (current) => {
         const rawPercentage = (current / target) * 100;
         const isTargetReached = current >= target;
@@ -20,15 +35,15 @@ const DualUserProgress = ({ user1, user2, target }) => {
             extraProgress: isTargetReached ? current - target : 0
         };
     };
-    const user1Stats = getProgressStats(user1.current);
-    const user2Stats = getProgressStats(user2.current);
+    const user1Stats = getProgressStats(effectiveUser1Progress);
+    const user2Stats = getProgressStats(effectiveUser2Progress);
     const getMotivationalMessage = () => {
         // Helper functions for cleaner code
         const calculateProgress = (current, target) => (current / target) * 100;
         const formatPercentage = (value) => Math.round(value);
         // Calculate progress stats
-        const user1Progress = calculateProgress(user1.current, target);
-        const user2Progress = calculateProgress(user2.current, target);
+        const user1Progress = calculateProgress(effectiveUser1Progress, target);
+        const user2Progress = calculateProgress(effectiveUser2Progress, target);
         const differencePercentage = Math.abs(user1Progress - user2Progress);
         const isUser1Leading = user1Progress > user2Progress;
         const leader = isUser1Leading ? user1 : user2;
@@ -64,12 +79,12 @@ const DualUserProgress = ({ user1, user2, target }) => {
             return `${achiever} has reached the summit! ${chaser}, you're on your way - keep that fire burning! 🔥 The view is worth it! 🏔️`;
         }
         // Starting phase scenarios
-        if (user1.current === 0 && user2.current === 0) {
+        if (effectiveUser1Progress === 0 && effectiveUser2Progress === 0) {
             return `The stage is set for an epic challenge! ${user1.name} and ${user2.name}, your journey to greatness begins now! 🎬 Ready, set, go! 🚀`;
         }
-        if (user1.current === 0 || user2.current === 0) {
-            const starter = user1.current > 0 ? user1.name : user2.name;
-            const waiting = user1.current === 0 ? user1.name : user2.name;
+        if (effectiveUser1Progress === 0 || effectiveUser2Progress === 0) {
+            const starter = effectiveUser1Progress > 0 ? user1.name : user2.name;
+            const waiting = effectiveUser1Progress === 0 ? user1.name : user2.name;
             const starterProgress = formatPercentage(Math.max(user1Progress, user2Progress));
             if (starterProgress < 5) {
                 return `${starter} has taken the first brave step! ${waiting}, the perfect time to join is now! 🎯 Let the challenge begin! 💫`;
@@ -150,6 +165,6 @@ const DualUserProgress = ({ user1, user2, target }) => {
                                                     ? '0 0 10px rgba(168, 85, 247, 0.5)'
                                                     : '0 0 10px rgba(96, 165, 250, 0.5)',
                                             } }) }, user.name));
-                                }) }), _jsx(UserIndicator, { ...user1, position: user1Stats.visualPosition, isTargetReached: user1Stats.isTargetReached, questionsLeft: user1Stats.questionsLeft, extraProgress: user1Stats.extraProgress, isLeading: user1.current > user2.current, isFirstUser: true }), _jsx(UserIndicator, { ...user2, position: user2Stats.visualPosition, isTargetReached: user2Stats.isTargetReached, questionsLeft: user2Stats.questionsLeft, extraProgress: user2Stats.extraProgress, isLeading: user2.current > user1.current, isFirstUser: false })] })] })] }));
+                                }) }), _jsx(UserIndicator, { ...user1, current: effectiveUser1Progress, position: user1Stats.visualPosition, isTargetReached: user1Stats.isTargetReached, questionsLeft: user1Stats.questionsLeft, extraProgress: user1Stats.extraProgress, isLeading: effectiveUser1Progress > effectiveUser2Progress, isFirstUser: true }), _jsx(UserIndicator, { ...user2, current: effectiveUser2Progress, position: user2Stats.visualPosition, isTargetReached: user2Stats.isTargetReached, questionsLeft: user2Stats.questionsLeft, extraProgress: user2Stats.extraProgress, isLeading: effectiveUser2Progress > effectiveUser1Progress, isFirstUser: false })] })] })] }));
 };
 export default DualUserProgress;
