@@ -584,6 +584,19 @@ const QBankTracker: React.FC = () => {
 
       {/* Desktop layout */}
       <div className="hidden lg:flex flex-col gap-6 w-full">
+      <DualUserProgress
+          user1={{
+            name: state.stats.user1.name,
+            current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user1Completed : 0,
+            color: "#2563eb"
+          }}
+          user2={{
+            name: state.stats.user2.name,
+            current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user2Completed : 0,
+            color: "#7242eb"
+          }}
+          target={DAILY_TARGET}
+        />
         <div className="grid grid-cols-2 gap-6">
           <StatsComparison
             stats={state.stats}
@@ -600,19 +613,6 @@ const QBankTracker: React.FC = () => {
             onRefresh={refreshData}
           />
         </div>
-        <DualUserProgress
-          user1={{
-            name: state.stats.user1.name,
-            current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user1Completed : 0,
-            color: "#2563eb"
-          }}
-          user2={{
-            name: state.stats.user2.name,
-            current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user2Completed : 0,
-            color: "#7242eb"
-          }}
-          target={DAILY_TARGET}
-        />
       </div>
     </>
   );

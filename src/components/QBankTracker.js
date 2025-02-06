@@ -326,10 +326,7 @@ const QBankTracker = () => {
                         }, target: DAILY_TARGET }), _jsx(ActivityLogs, { logs: activityLogs, userNames: {
                             user1: state.stats.user1.name,
                             user2: state.stats.user2.name
-                        }, onRefresh: refreshData })] }), _jsxs("div", { className: "hidden lg:flex flex-col gap-6 w-full", children: [_jsxs("div", { className: "grid grid-cols-2 gap-6", children: [_jsx(StatsComparison, { stats: state.stats, onUpdateProgress: handleSubmit, dailyData: dailyProgress, activityLogs: activityLogs }), _jsx(ActivityLogs, { logs: activityLogs, userNames: {
-                                    user1: state.stats.user1.name,
-                                    user2: state.stats.user2.name
-                                }, onRefresh: refreshData })] }), _jsx(DualUserProgress, { user1: {
+                        }, onRefresh: refreshData })] }), _jsxs("div", { className: "hidden lg:flex flex-col gap-6 w-full", children: [_jsx(DualUserProgress, { user1: {
                             name: state.stats.user1.name,
                             current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user1Completed : 0,
                             color: "#2563eb"
@@ -337,6 +334,9 @@ const QBankTracker = () => {
                             name: state.stats.user2.name,
                             current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user2Completed : 0,
                             color: "#7242eb"
-                        }, target: DAILY_TARGET })] })] }));
+                        }, target: DAILY_TARGET }), _jsxs("div", { className: "grid grid-cols-2 gap-6", children: [_jsx(StatsComparison, { stats: state.stats, onUpdateProgress: handleSubmit, dailyData: dailyProgress, activityLogs: activityLogs }), _jsx(ActivityLogs, { logs: activityLogs, userNames: {
+                                    user1: state.stats.user1.name,
+                                    user2: state.stats.user2.name
+                                }, onRefresh: refreshData })] })] })] }));
 };
 export default QBankTracker;

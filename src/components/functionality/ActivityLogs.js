@@ -1,10 +1,10 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Clock, RefreshCw, List } from 'lucide-react';
+import { Clock, RefreshCw, List, Bell, BellOff } from 'lucide-react';
 const calculateAccuracy = (correct, total) => {
     if (total === 0)
         return '0.0';
@@ -46,8 +46,20 @@ const ActivityLogs = ({ logs, userNames, onRefresh }) => {
         end: getCurrentDate()
     });
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [activeTab, setActiveTab] = useState('list');
+    const [activeTab, setActiveTab] = useState('clock');
     const [selectedUsers, setSelectedUsers] = useState(['user1', 'user2']);
+    const [currentTime, setCurrentTime] = useState(new Date());
+    const [notifications, setNotifications] = useState(() => {
+        const saved = localStorage.getItem('activityLogNotifications');
+        return saved ? JSON.parse(saved) : { enabled: false, lastSeenLogId: 0 };
+    });
+    // Add auto-refresh effect
+    useEffect(() => {
+        const interval = setInterval(() => {
+            onRefresh();
+        }, 3); // Refresh every 3 seconds
+        return () => clearInterval(interval);
+    }, [onRefresh]);
     // Update filtering to handle both single day and range modes
     const filteredLogs = logs.filter(log => {
         const logDate = new Date(log.timestamp);
@@ -116,8 +128,26 @@ const ActivityLogs = ({ logs, userNames, onRefresh }) => {
             ? prev.filter(u => u !== user)
             : [...prev, user]);
     };
+    // Add useEffect for updating current time
     useEffect(() => {
-        // Function to check if we need to update the date
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 1000); // Update every second
+        return () => clearInterval(timer);
+    }, []);
+    const getCurrentTimePosition = () => {
+        const hours = currentTime.getHours();
+        const minutes = currentTime.getMinutes();
+        const seconds = currentTime.getSeconds();
+        // Calculate angle (15 degrees per hour, adjusted for minutes and seconds)
+        const angle = ((hours + minutes / 60 + seconds / 3600) * 15 - 90) * (Math.PI / 180);
+        return {
+            x: Math.cos(angle),
+            y: Math.sin(angle)
+        };
+    };
+    // Check for date changes and refresh data
+    useEffect(() => {
         const checkDate = () => {
             const newDate = getCurrentDate();
             if (dateRange.start !== newDate && !isRangeMode) {
@@ -126,34 +156,113 @@ const ActivityLogs = ({ logs, userNames, onRefresh }) => {
                     start: newDate,
                     end: newDate
                 });
-                // Refresh data when date changes
                 onRefresh();
             }
         };
-        // Calculate time until next check (next minute in IST)
+        // Calculate initial delay to align with the next minute
         const now = new Date();
-        const istOffset = 5.5 * 60 * 60 * 1000; // IST offset in milliseconds
+        const istOffset = 5.5 * 60 * 60 * 1000;
         const istTime = new Date(now.getTime() + istOffset);
-        // Calculate milliseconds until next minute
         const msUntilNextMinute = 60000 - (istTime.getSeconds() * 1000 + istTime.getMilliseconds());
-        console.log('Current IST time:', istTime.toISOString());
-        console.log('Ms until next check:', msUntilNextMinute);
         // Initial check
         checkDate();
         // Set up the interval
         const initialTimeout = setTimeout(() => {
             checkDate();
-            // After initial alignment, check every minute
             const interval = setInterval(checkDate, 60000);
             return () => clearInterval(interval);
         }, msUntilNextMinute);
         return () => clearTimeout(initialTimeout);
     }, [dateRange.start, isRangeMode, onRefresh]);
-    return (_jsxs(Card, { className: "w-full max-w-2xl shadow-lg rounded-lg overflow-hidden bg-gradient-to-br from-white/80 via-white/90 to-white/80 dark:from-slate-900/80 dark:via-slate-900/90 dark:to-slate-900/80 backdrop-blur-sm border border-white/20 dark:border-slate-800/20", children: [_jsx(CardHeader, { className: "border-b p-4 bg-gradient-to-r from-purple-600/10 to-blue-600/10 dark:from-purple-900/20 dark:to-blue-900/20", children: _jsxs("div", { className: "flex items-center justify-between", children: [_jsxs(CardTitle, { className: "flex items-center gap-2 text-lg font-semibold", children: [_jsx(Clock, { className: "w-5 h-5 text-amber-500" }), _jsx("span", { className: "bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent", children: "Activity Log" })] }), _jsx(Button, { variant: "outline", size: "sm", onClick: handleRefresh, disabled: isRefreshing, className: "hover:bg-gradient-to-r hover:from-purple-600/5 hover:to-blue-600/5", children: _jsx(RefreshCw, { className: `w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}` }) })] }) }), _jsxs(CardContent, { className: "p-4 space-y-4", children: [_jsxs("div", { className: "flex border rounded-md bg-white dark:bg-slate-900 dark:border-slate-700", children: [_jsxs("button", { className: `flex-1 p-2 transition-colors rounded-l-md ${activeTab === 'list'
+    const requestNotificationPermission = async () => {
+        // Check if browser supports notifications
+        if (!('Notification' in window)) {
+            console.log('This browser does not support notifications');
+            return;
+        }
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                setNotifications(prev => ({ ...prev, enabled: true }));
+            }
+        }
+        catch (error) {
+            console.error('Error requesting notification permission:', error);
+        }
+    };
+    // Add useEffect to request notification permission on mount
+    useEffect(() => {
+        if ('Notification' in window && Notification.permission === 'default') {
+            requestNotificationPermission();
+        }
+    }, []);
+    const toggleNotifications = async () => {
+        if (!notifications.enabled) {
+            if (Notification.permission === 'granted') {
+                setNotifications(prev => ({ ...prev, enabled: true }));
+            }
+            else {
+                await requestNotificationPermission();
+            }
+        }
+        else {
+            setNotifications(prev => ({ ...prev, enabled: false }));
+        }
+    };
+    const showNotification = useCallback((log) => {
+        if (!notifications.enabled)
+            return;
+        if (!('Notification' in window) || Notification.permission !== 'granted')
+            return;
+        const userName = userNames[log.user_type];
+        try {
+            new Notification('QBank Activity', {
+                body: `${userName} completed ${log.completed} questions with ${log.correct} correct`,
+                icon: '/favicon.ico', // Add your app icon if available
+                tag: 'qbank-activity', // Prevents duplicate notifications
+            });
+        }
+        catch (error) {
+            console.error('Error showing notification:', error);
+        }
+    }, [notifications.enabled, userNames]);
+    // Modify this effect to check for new logs more effectively
+    useEffect(() => {
+        if (!notifications.enabled || !logs.length)
+            return;
+        const newLogs = logs.filter(log => log.id > notifications.lastSeenLogId);
+        if (newLogs.length > 0) {
+            // Show notification for each new log
+            newLogs.forEach(log => {
+                showNotification(log);
+            });
+            // Update lastSeenLogId to the most recent log ID
+            setNotifications(prev => ({ ...prev, lastSeenLogId: Math.max(...newLogs.map(log => log.id)) }));
+        }
+        // Set up polling interval for checking new logs
+        const interval = setInterval(() => {
+            if (document.hidden) {
+                onRefresh();
+            }
+        }, 30000); // Check every 30 seconds when page is hidden
+        return () => clearInterval(interval);
+    }, [logs, notifications.enabled, notifications.lastSeenLogId, showNotification, onRefresh]);
+    // Initialize lastSeenLogId more effectively
+    useEffect(() => {
+        if (logs.length > 0 && notifications.lastSeenLogId === 0) {
+            const maxId = Math.max(...logs.map(log => log.id));
+            setNotifications(prev => ({ ...prev, lastSeenLogId: maxId }));
+        }
+    }, [logs]);
+    // Save notification state to localStorage
+    useEffect(() => {
+        localStorage.setItem('activityLogNotifications', JSON.stringify(notifications));
+    }, [notifications]);
+    return (_jsxs(Card, { className: "w-full max-w-2xl shadow-lg rounded-lg overflow-hidden bg-gradient-to-br from-white/80 via-white/90 to-white/80 dark:from-slate-900/80 dark:via-slate-900/90 dark:to-slate-900/80 backdrop-blur-sm border border-white/20 dark:border-slate-800/20", children: [_jsx(CardHeader, { className: "border-b p-4 bg-gradient-to-r from-purple-600/10 to-blue-600/10 dark:from-purple-900/20 dark:to-blue-900/20", children: _jsxs("div", { className: "flex items-center justify-between", children: [_jsxs(CardTitle, { className: "flex items-center gap-2 text-lg font-semibold", children: [_jsx(Clock, { className: "w-5 h-5 text-amber-500" }), _jsx("span", { className: "bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent", children: "Activity Log" })] }), _jsxs("div", { className: "flex gap-2", children: [_jsx(Button, { variant: "outline", size: "sm", onClick: toggleNotifications, className: `hover:bg-gradient-to-r hover:from-purple-600/5 hover:to-blue-600/5 ${notifications.enabled ? 'text-green-500' : ''}`, children: notifications.enabled ? (_jsx(Bell, { className: "w-4 h-4" })) : (_jsx(BellOff, { className: "w-4 h-4" })) }), _jsx(Button, { variant: "outline", size: "sm", onClick: handleRefresh, disabled: isRefreshing, className: "hover:bg-gradient-to-r hover:from-purple-600/5 hover:to-blue-600/5", children: _jsx(RefreshCw, { className: `w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}` }) })] })] }) }), _jsxs(CardContent, { className: "p-4 space-y-4", children: [_jsxs("div", { className: "flex border rounded-md bg-white dark:bg-slate-900 dark:border-slate-700", children: [_jsxs("button", { className: `flex-1 p-2 transition-colors rounded-l-md ${activeTab === 'clock'
                                     ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                                    : 'hover:bg-gradient-to-r hover:from-purple-600/5 hover:to-blue-600/5'}`, onClick: () => setActiveTab('list'), children: [_jsx(List, { className: "w-4 h-4 inline-block mr-2" }), "List View"] }), _jsxs("button", { className: `flex-1 p-2 transition-colors rounded-r-md ${activeTab === 'clock'
+                                    : 'hover:bg-gradient-to-r hover:from-purple-600/5 hover:to-blue-600/5'}`, onClick: () => setActiveTab('clock'), children: [_jsx(Clock, { className: "w-4 h-4 inline-block mr-2" }), "Clock View"] }), _jsxs("button", { className: `flex-1 p-2 transition-colors rounded-r-md ${activeTab === 'list'
                                     ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                                    : 'hover:bg-gradient-to-r hover:from-purple-600/5 hover:to-blue-600/5'}`, onClick: () => setActiveTab('clock'), children: [_jsx(Clock, { className: "w-4 h-4 inline-block mr-2" }), "Clock View"] })] }), _jsxs("div", { className: "space-y-2", children: [_jsxs("div", { className: "flex items-center justify-between", children: [_jsx("label", { className: "text-sm text-gray-600 dark:text-gray-300", children: "Select Date" }), _jsx(Button, { variant: "ghost", size: "sm", onClick: () => {
+                                    : 'hover:bg-gradient-to-r hover:from-purple-600/5 hover:to-blue-600/5'}`, onClick: () => setActiveTab('list'), children: [_jsx(List, { className: "w-4 h-4 inline-block mr-2" }), "List View"] })] }), _jsxs("div", { className: "space-y-2", children: [_jsxs("div", { className: "flex items-center justify-between", children: [_jsx("label", { className: "text-sm text-gray-600 dark:text-gray-300", children: "Select Date" }), _jsx(Button, { variant: "ghost", size: "sm", onClick: () => {
                                             setIsRangeMode(!isRangeMode);
                                             if (!isRangeMode) {
                                                 setDateRange({ start: getCurrentDate(), end: getCurrentDate() });
@@ -168,7 +277,16 @@ const ActivityLogs = ({ logs, userNames, onRefresh }) => {
                             : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'} ${!selectedUsers.includes(userType) && 'opacity-50'}`, children: [_jsx("span", { children: userNames[userType] }), _jsxs("div", { children: [dailyTotals[userType].completed, " completed, ", dailyTotals[userType].correct, " correct", " (", calculateAccuracy(dailyTotals[userType].correct, dailyTotals[userType].completed), "%)"] })] }, userType))), activeTab === 'clock' && (_jsx("div", { className: "p-4", children: _jsx(TooltipProvider, { children: _jsxs("svg", { viewBox: "-1.2 -1.2 2.4 2.4", className: "w-full max-w-xs mx-auto", children: [_jsx("circle", { cx: "0", cy: "0", r: "1", fill: "none", stroke: "rgb(203 213 225)", strokeWidth: "0.05" }), [...Array(24)].map((_, i) => {
                                         const angle = (i * 15 - 90) * (Math.PI / 180);
                                         return (_jsx("line", { x1: Math.cos(angle) * 0.9, y1: Math.sin(angle) * 0.9, x2: Math.cos(angle) * 1, y2: Math.sin(angle) * 1, stroke: "hsl(var(--muted-foreground))", strokeWidth: i % 6 === 0 ? "0.04" : "0.02" }, i));
-                                    }), timeSlots.map((slot, index) => {
+                                    }), (() => {
+                                        const { x, y } = getCurrentTimePosition();
+                                        const currentTimeString = currentTime.toLocaleTimeString('en-IN', {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                            second: '2-digit',
+                                            hour12: false
+                                        });
+                                        return (_jsxs("g", { children: [_jsx("line", { x1: "0", y1: "0", x2: x * 0.7, y2: y * 0.7, stroke: "rgba(0, 0, 0, 0.2)", strokeWidth: "0.04", strokeLinecap: "round", transform: "translate(0.01, 0.01)" }), _jsx("line", { x1: "0", y1: "0", x2: x * 0.7, y2: y * 0.7, stroke: "hsl(var(--primary))", strokeWidth: "0.04", strokeLinecap: "round", className: "transition-transform duration-1000 ease-linear" }), _jsx("text", { x: 0, y: -1.1, textAnchor: "middle", alignmentBaseline: "middle", fill: "hsl(var(--primary))", fontSize: "0.12", className: "font-medium", children: currentTimeString }), _jsx("circle", { cx: "0", cy: "0", r: "0.06", fill: "hsl(var(--primary))", className: "animate-pulse" })] }));
+                                    })(), timeSlots.map((slot, index) => {
                                         const startAngleDeg = index * 45 - 90; // 45° per slot
                                         const endAngleDeg = (index + 1) * 45 - 90;
                                         const startAngleRad = startAngleDeg * (Math.PI / 180);
