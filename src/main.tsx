@@ -13,7 +13,7 @@ if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.match
 //Service worker registration
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js').catch(error => {
+    navigator.serviceWorker.register('/MarrowLeaderboard/service-worker.js').catch(error => {
       console.log('ServiceWorker registration failed:', error);
     });
   });
