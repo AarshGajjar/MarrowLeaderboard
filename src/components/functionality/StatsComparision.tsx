@@ -195,7 +195,7 @@ const StatsComparison: React.FC<{
 
   return (
     <>
-      <Card className="relative w-full shadow-lg rounded-lg bg-gradient-to-br from-white/80 via-white/90 to-white/80 dark:from-slate-900/80 dark:via-slate-900/90 dark:to-slate-900/80 backdrop-blur-sm border border-white/20 dark:border-slate-800/20">
+      <Card className="relative w-full h-full shadow-lg rounded-lg bg-gradient-to-br from-white/80 via-white/90 to-white/80 dark:from-slate-900/80 dark:via-slate-900/90 dark:to-slate-900/80 backdrop-blur-sm border border-white/20 dark:border-slate-800/20">
         <CardHeader className="border-b p-4 bg-gradient-to-r from-purple-600/10 to-blue-600/10 dark:from-purple-900/20 dark:to-blue-900/20">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
@@ -206,33 +206,33 @@ const StatsComparison: React.FC<{
             </CardTitle>
           </div>
         </CardHeader>
-        <CardContent className="p-4 sm:p-6 flex flex-col items-stretch overflow-x-auto">
-          <div className="min-w-0 w-full space-y-4">
+        <CardContent className="p-4 sm:p-6 flex flex-col h-[calc(100%-73px)] overflow-auto">
+          <div className="min-w-0 w-full flex flex-col flex-1">
             {/* Header section */}
-            <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4 sm:gap-2">
+            <div className="flex justify-between items-center mb-6 gap-2">
               {/* User 1 Header */}
-              <div className="w-full sm:flex-1">
+              <div className="flex-1 min-w-[120px]">
                 <div className="text-center space-y-2">
-                  <h3 className="font-semibold text-xl text-[#7242eb] dark:text-purple-400 px-3 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-800 shadow-sm">
+                  <h3 className="font-semibold text-xl text-[#7242eb] dark:text-purple-400 px-3 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-800 shadow-sm truncate">
                     {stats.user1.name}
                   </h3>
-                  <div className="flex flex-col sm:flex-row justify-center gap-1 sm:gap-2">
+                  <div className="flex justify-center gap-2">
                     <Button 
                       variant="outline" 
                       size="sm" 
                       onClick={() => { setActiveUser('user1'); setIsDialogOpen(true); }}
-                      className="hover:bg-purple-50 border-purple-600/20 text-xs sm:text-sm w-full sm:w-auto"
+                      className="hover:bg-purple-50 border-purple-600/20 text-xs"
                     >
-                      <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-purple-600" />
+                      <Plus className="w-3 h-3 mr-1 text-purple-600" />
                       <span className="text-purple-600">Add</span>
                     </Button>
                     <Button 
                       variant="outline" 
                       size="sm"
                       onClick={() => { setSelectedProgressUser('user1'); setShowProgress(true); }}
-                      className="hover:bg-blue-50 border-blue-600/20 text-xs sm:text-sm w-full sm:w-auto"
+                      className="hover:bg-blue-50 border-blue-600/20 text-xs"
                     >
-                      <ChartLine className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-blue-600" />
+                      <ChartLine className="w-3 h-3 mr-1 text-blue-600" />
                       <span className="text-blue-600">Stats</span>
                     </Button>
                   </div>
@@ -240,7 +240,7 @@ const StatsComparison: React.FC<{
               </div>
               
               {/* VS Header */}
-              <div className="w-16 sm:w-24 flex-shrink-0">
+              <div className="w-16 flex-shrink-0">
                 <div className="text-center">
                   <div className="relative">
                     <div className="absolute inset-0 bg-slate-100/50 dark:bg-slate-800/50 rounded-full transform -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 w-8 sm:w-12 h-8 sm:h-12"></div>
@@ -281,28 +281,28 @@ const StatsComparison: React.FC<{
               </div>
               
               {/* User 2 Header */}
-              <div className="w-full sm:flex-1">
+              <div className="flex-1 min-w-[120px]">
                 <div className="text-center space-y-2">
-                  <h3 className="font-semibold text-xl text-[#4287eb] dark:text-blue-400 px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800 shadow-sm">
+                  <h3 className="font-semibold text-xl text-[#4287eb] dark:text-blue-400 px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800 shadow-sm truncate">
                     {stats.user2.name}
                   </h3>
-                  <div className="flex flex-col sm:flex-row justify-center gap-1 sm:gap-2">
+                  <div className="flex justify-center gap-2">
                     <Button 
                       variant="outline" 
                       size="sm" 
                       onClick={() => { setActiveUser('user2'); setIsDialogOpen(true); }}
-                      className="hover:bg-purple-50 border-purple-600/20 text-xs sm:text-sm w-full sm:w-auto"
+                      className="hover:bg-purple-50 border-purple-600/20 text-xs"
                     >
-                      <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-purple-600" />
+                      <Plus className="w-3 h-3 mr-1 text-purple-600" />
                       <span className="text-purple-600">Add</span>
                     </Button>
                     <Button 
                       variant="outline" 
                       size="sm"
                       onClick={() => { setSelectedProgressUser('user2'); setShowProgress(true); }}
-                      className="hover:bg-blue-50 border-blue-600/20 text-xs sm:text-sm w-full sm:w-auto"
+                      className="hover:bg-blue-50 border-blue-600/20 text-xs"
                     >
-                      <ChartLine className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-blue-600" />
+                      <ChartLine className="w-3 h-3 mr-1 text-blue-600" />
                       <span className="text-blue-600">Stats</span>
                     </Button>
                   </div>
@@ -311,7 +311,7 @@ const StatsComparison: React.FC<{
             </div>
 
             {/* Comparisons */}
-            <div className="space-y-4 w-full">
+            <div className="space-y-4 w-full flex-1 flex flex-col justify-center">
               <ComparisonBar 
                 label="Total Completed"
                 value1={stats.user1.completed}
@@ -331,7 +331,7 @@ const StatsComparison: React.FC<{
             </div>
 
             {/* Leader Banner */}
-            <div className="mt-8 flex justify-center w-full">
+            <div className="mt-auto mb-4 flex justify-center w-full">
               <TooltipProvider>
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger>

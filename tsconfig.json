@@ -1,16 +1,27 @@
 {
   "compilerOptions": {
+    "target": "ESNext",
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext",
+      "WebWorker",
+      "WebWorker.ImportScripts"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     },
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Node",
     "strict": true,
     "jsx": "react-jsx",
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "isolatedModules": true,
+    "noEmit": true,
     "forceConsistentCasingInFileNames": true
-  }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "public/service-worker.ts"],
+  "exclude": ["node_modules"]
 }

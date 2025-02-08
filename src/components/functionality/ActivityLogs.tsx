@@ -5,7 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Clock, RefreshCw, List, Bell, BellOff } from 'lucide-react';
 import marrowIcon from '@/assets/marrow.png';
+import CrossPlatformNotifications from './CrossPlatformNotifications';
+import InAppNotification from './InAppNotification';
 
+// Core interfaces defining the structure of activity logs and component props
 interface ActivityLog {
   id: number;
   user_type: 'user1' | 'user2';
@@ -29,11 +32,20 @@ interface NotificationState {
   lastSeenLogId: number;
 }
 
+// Helper functions for calculations and formatting
+/**
+ * Calculates accuracy percentage from correct answers and total questions
+ * @returns Formatted string with accuracy to 1 decimal place
+ */
 const calculateAccuracy = (correct: number, total: number): string => {
   if (total === 0) return '0.0';
   return ((correct / total) * 100).toFixed(1);
 };
 
+/**
+ * Formats timestamp to localized date-time string
+ * Uses Indian locale and 24-hour format
+ */
 const formatDate = (timestamp: string): string => {
   const date = new Date(timestamp);
   return date.toLocaleString('en-IN', {
@@ -61,6 +73,10 @@ const formatTimeRange = (slotIndex: number): string => {
   return `${String(startHour).padStart(2, '0')}:00-${String(endHour).padStart(2, '0')}:00`;
 };
 
+/**
+ * Converts IST (UTC+5:30) to local date string
+ * Handles timezone offset for consistent date display
+ */
 const getCurrentDate = () => {
   // Get current UTC time
   const now = new Date();
@@ -70,6 +86,7 @@ const getCurrentDate = () => {
 };
 
 const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }) => {
+  // State management for various UI controls and features
   const [isRangeMode, setIsRangeMode] = useState(false);
   const [dateRange, setDateRange] = useState({
     start: getCurrentDate(),
@@ -86,8 +103,12 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [lastRefreshAttempt, setLastRefreshAttempt] = useState<number>(Date.now());
   const MINIMUM_REFRESH_INTERVAL = 5000; // 5 seconds minimum between refreshes
+  const [notificationSystem, setNotificationSystem] = useState<any>(null);
 
-  // Replace the existing auto-refresh effect with this improved version
+  /**
+   * Enhanced auto-refresh mechanism with error handling and rate limiting
+   * Only refreshes when viewing today's data
+   */
   useEffect(() => {
     const handleRefresh = async () => {
       const now = Date.now();
@@ -121,7 +142,10 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
     };
   }, [onRefresh, dateRange.start, isRangeMode, lastRefreshAttempt]);
 
-  // Modify the manual refresh handler
+  /**
+   * Manual refresh handler with rate limiting and error handling
+   * Prevents rapid consecutive refreshes
+   */
   const handleRefresh = async () => {
     const now = Date.now();
     if (now - lastRefreshAttempt < MINIMUM_REFRESH_INTERVAL) {
@@ -141,7 +165,10 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
     }
   };
 
-  // Update filtering to handle both single day and range modes
+  /**
+   * Filters logs based on selected date range and users
+   * Handles both single day and date range modes
+   */
   const filteredLogs = logs.filter(log => {
     const logDate = new Date(log.timestamp);
     const startDate = new Date(dateRange.start);
@@ -159,6 +186,10 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
     );
   });
 
+  /**
+   * Organizes activity data into 3-hour time slots
+   * Creates 8 slots covering full 24-hour period
+   */
   const timeSlots = Array(8).fill(null).map(() => ({ 
     total: 0, 
     correct: 0, 
@@ -197,6 +228,10 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
     user2: { completed: 0, correct: 0 }
   });
   
+  /**
+   * Calculates position on clock face for given timestamp
+   * Returns x,y coordinates for plotting on SVG
+   */
   const getLogPosition = (timestamp: string) => {
     const date = new Date(timestamp);
     const hours = date.getHours();
@@ -243,59 +278,43 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
     };
   };
 
-  const requestNotificationPermission = async () => {
-    // Check if browser supports notifications
-    if (!('Notification' in window)) {
-      console.log('This browser does not support notifications');
-      return;
-    }
-
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
-        setNotifications(prev => ({ ...prev, enabled: true }));
-      }
-    } catch (error) {
-      console.error('Error requesting notification permission:', error);
-    }
+  /**
+   * Notification system implementation
+   * Handles permission requests and notification display
+   */
+  const initializeNotifications = async () => {
+    const system = await CrossPlatformNotifications.init();
+    setNotificationSystem(system);
+    setNotifications(prev => ({ ...prev, enabled: system.supported }));
   };
 
   // Add useEffect to request notification permission on mount
   useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      requestNotificationPermission();
-    }
+    initializeNotifications();
   }, []);
 
   const toggleNotifications = async () => {
     if (!notifications.enabled) {
-      if (Notification.permission === 'granted') {
-        setNotifications(prev => ({ ...prev, enabled: true }));
-      } else {
-        await requestNotificationPermission();
-      }
+      await initializeNotifications();
     } else {
       setNotifications(prev => ({ ...prev, enabled: false }));
     }
   };
 
-  const showNotification = useCallback((log: ActivityLog) => {
-    if (!notifications.enabled) return;
-    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const showNotification = useCallback(async (log: ActivityLog) => {
+    if (!notifications.enabled || !notificationSystem?.supported) return;
+    
+    await CrossPlatformNotifications.showNotification(
+      log,
+      userNames,
+      marrowIcon
+    );
+  }, [notifications.enabled, userNames, notificationSystem]);
 
-    const userName = userNames[log.user_type];
-    try {
-      new Notification('QBank Activity', {
-        body: `${userName} completed ${log.completed} questions with ${log.correct} correct`,
-        icon: marrowIcon,
-        tag: 'qbank-activity', // Prevents duplicate notifications
-      });
-    } catch (error) {
-      console.error('Error showing notification:', error);
-    }
-  }, [notifications.enabled, userNames]);
-
-  // Modify this effect to check for new logs more effectively
+  /**
+   * Watches for new logs and triggers notifications
+   * Updates lastSeenLogId to track newest notifications
+   */
   useEffect(() => {
     if (!notifications.enabled || !logs.length) return;
 
@@ -332,8 +351,11 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
     localStorage.setItem('activityLogNotifications', JSON.stringify(notifications));
   }, [notifications]);
 
+  // UI Component rendering
   return (
     <Card className="w-full shadow-lg rounded-lg bg-gradient-to-br from-white/80 via-white/90 to-white/80 dark:from-slate-900/80 dark:via-slate-900/90 dark:to-slate-900/80 backdrop-blur-sm border border-white/20 dark:border-slate-800/20">
+      <InAppNotification />
+      {/* Card Header with title and controls */}
       <CardHeader className="border-b p-4 bg-gradient-to-r from-purple-600/10 to-blue-600/10 dark:from-purple-900/20 dark:to-blue-900/20">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
@@ -375,6 +397,7 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
         )}
       </CardHeader>
       
+      {/* Main content area with views and controls */}
       <CardContent className="p-4 sm:p-6 flex flex-col items-stretch overflow-x-auto">
         <div className="min-w-0 w-full space-y-4">
           <div className="flex border rounded-md bg-white dark:bg-slate-900 dark:border-slate-700">
