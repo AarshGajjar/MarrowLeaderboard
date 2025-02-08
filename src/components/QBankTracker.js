@@ -1,6 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useState, useEffect } from 'react';
-import { Crosshair, Award, Check, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '../lib/supabase';
 import StatsComparison from './functionality/StatsComparision';
@@ -26,59 +26,11 @@ const calculateMetrics = (stats) => {
         effectiveScore: stats.correct
     };
 };
-const determineLeader = (user1Metrics, user2Metrics) => {
-    const compareAndGetLeader = (value1, value2) => {
-        return value1 >= value2 ? 'user1' : 'user2';
-    };
-    const comparisons = {
-        accuracy: {
-            diff: user1Metrics.accuracy - user2Metrics.accuracy,
-            leader: compareAndGetLeader(user1Metrics.accuracy, user2Metrics.accuracy),
-            metric: 'accuracy',
-            value: Math.abs(user1Metrics.accuracy - user2Metrics.accuracy).toFixed(1) + '%'
-        },
-        volume: {
-            diff: user1Metrics.questionsPerDay - user2Metrics.questionsPerDay,
-            leader: compareAndGetLeader(user1Metrics.questionsPerDay, user2Metrics.questionsPerDay),
-            metric: 'questions',
-            value: Math.abs(user1Metrics.questionsPerDay - user2Metrics.questionsPerDay).toString()
-        },
-        points: {
-            diff: user1Metrics.points - user2Metrics.points,
-            leader: compareAndGetLeader(user1Metrics.points, user2Metrics.points),
-            metric: 'points',
-            value: Math.abs(user1Metrics.points - user2Metrics.points).toString()
-        },
-        effectiveScore: {
-            diff: user1Metrics.effectiveScore - user2Metrics.effectiveScore,
-            leader: compareAndGetLeader(user1Metrics.effectiveScore, user2Metrics.effectiveScore),
-            metric: 'correct',
-            value: Math.abs(user1Metrics.effectiveScore - user2Metrics.effectiveScore).toString()
-        }
-    };
-    const overallLeader = compareAndGetLeader(user1Metrics.points, user2Metrics.points);
-    return {
-        overallLeader,
-        comparisons,
-        user1Metrics,
-        user2Metrics
-    };
-};
 const getISTDate = () => {
     const date = new Date();
     const istTime = date.getTime() + (5.5 * 60 * 60 * 1000);
     const istDate = new Date(istTime);
     return istDate.toISOString().split('T')[0];
-};
-const formatDate = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-    });
 };
 const isSameDate = (date1, date2) => {
     const d1 = new Date(date1);
@@ -87,39 +39,9 @@ const isSameDate = (date1, date2) => {
         d1.getMonth() === d2.getMonth() &&
         d1.getDate() === d2.getDate());
 };
-const getMetricIcon = (metric) => {
-    switch (metric) {
-        case 'accuracy':
-            return _jsx(Crosshair, { className: "w-4 h-4" });
-        case 'questions':
-            return _jsx(Award, { className: "w-4 h-4" });
-        case 'correct':
-            return _jsx(Check, { className: "w-4 h-4" });
-        default:
-            return null;
-    }
-};
-const convertToDailyData = (progress) => {
-    return progress.map(p => ({
-        date: p.date,
-        user1Data: {
-            completed: p.user1Completed,
-            correct: p.user1Correct,
-            date: p.date,
-            accuracy: p.user1Completed > 0 ? (p.user1Correct / p.user1Completed) * 100 : 0
-        },
-        user2Data: {
-            completed: p.user2Completed,
-            correct: p.user2Correct,
-            date: p.date,
-            accuracy: p.user2Completed > 0 ? (p.user2Correct / p.user2Completed) * 100 : 0
-        }
-    }));
-};
 // Section toggle component
-const SectionHeader = ({ title, isExpanded, onToggle, icon }) => (_jsxs("div", { className: "flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50", onClick: onToggle, children: [_jsxs("div", { className: "flex items-center gap-2", children: [icon, _jsx("h3", { className: "font-medium", children: title })] }), isExpanded ? _jsx(ChevronUp, { className: "w-4 h-4" }) : _jsx(ChevronDown, { className: "w-4 h-4" })] }));
 // Alert component
-const StatusAlert = ({ message, type, onClose }) => (_jsx(Alert, { className: `${type === 'success' ? 'bg-green-50' : 'bg-red-50'} mb-4`, children: _jsxs("div", { className: "flex items-center gap-2", children: [type === 'success' ? (_jsx(Check, { className: "w-4 h-4 text-green-500" })) : (_jsx(AlertCircle, { className: "w-4 h-4 text-red-500" })), _jsx(AlertDescription, { children: message })] }) }));
+const StatusAlert = ({ message, type }) => (_jsx(Alert, { className: `${type === 'success' ? 'bg-green-50' : 'bg-red-50'} mb-4`, children: _jsxs("div", { className: "flex items-center gap-2", children: [type === 'success' ? (_jsx(Check, { className: "w-4 h-4 text-green-500" })) : (_jsx(AlertCircle, { className: "w-4 h-4 text-red-500" })), _jsx(AlertDescription, { children: message })] }) }));
 // Main component
 const QBankTracker = () => {
     const [state, setState] = useState({
@@ -310,33 +232,37 @@ const QBankTracker = () => {
         fetchData();
         fetchDailyProgress();
     }, []);
-    const LeftColumn = () => (_jsxs("div", { className: "space-y-6", children: [showAlert.visible && (_jsx(StatusAlert, { message: showAlert.message, type: showAlert.type, onClose: () => setShowAlert(prev => ({ ...prev, visible: false })) })), _jsx(StatsComparison, { stats: state.stats, onUpdateProgress: handleSubmit, dailyData: dailyProgress, activityLogs: activityLogs })] }));
-    const RightColumn = () => (_jsx("div", { className: "space-y-6", children: _jsx(ActivityLogs, { logs: activityLogs, userNames: {
-                user1: state.stats.user1.name,
-                user2: state.stats.user2.name
-            }, onRefresh: refreshData }) }));
-    return (_jsxs(_Fragment, { children: [_jsx(Toaster, { position: "top-center", richColors: true, expand: true, closeButton: true }), _jsxs("div", { className: "lg:hidden space-y-6", children: [showAlert.visible && (_jsx(StatusAlert, { message: showAlert.message, type: showAlert.type, onClose: () => setShowAlert(prev => ({ ...prev, visible: false })) })), _jsx(StatsComparison, { stats: state.stats, onUpdateProgress: handleSubmit, dailyData: dailyProgress, activityLogs: activityLogs }), _jsx(DualUserProgress, { user1: {
-                            name: state.stats.user1.name,
-                            current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user1Completed : 0,
-                            color: "#2563eb"
-                        }, user2: {
-                            name: state.stats.user2.name,
-                            current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user2Completed : 0,
-                            color: "#7242eb"
-                        }, target: DAILY_TARGET }), _jsx(ActivityLogs, { logs: activityLogs, userNames: {
-                            user1: state.stats.user1.name,
-                            user2: state.stats.user2.name
-                        }, onRefresh: refreshData })] }), _jsxs("div", { className: "hidden lg:flex flex-col gap-6 w-full", children: [_jsx(DualUserProgress, { user1: {
-                            name: state.stats.user1.name,
-                            current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user1Completed : 0,
-                            color: "#2563eb"
-                        }, user2: {
-                            name: state.stats.user2.name,
-                            current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user2Completed : 0,
-                            color: "#7242eb"
-                        }, target: DAILY_TARGET }), _jsxs("div", { className: "grid grid-cols-2 gap-6", children: [_jsx(StatsComparison, { stats: state.stats, onUpdateProgress: handleSubmit, dailyData: dailyProgress, activityLogs: activityLogs }), _jsx(ActivityLogs, { logs: activityLogs, userNames: {
-                                    user1: state.stats.user1.name,
-                                    user2: state.stats.user2.name
-                                }, onRefresh: refreshData })] })] })] }));
+    const getTodaysTotals = (logs) => {
+        const today = getISTDate();
+        return logs.reduce((acc, log) => {
+            if (isSameDate(log.timestamp, today)) {
+                const userKey = log.user_type;
+                acc[userKey].completed += log.completed;
+                acc[userKey].correct += log.correct;
+            }
+            return acc;
+        }, {
+            user1: { completed: 0, correct: 0 },
+            user2: { completed: 0, correct: 0 }
+        });
+    };
+    // Common alert component
+    const alertComponent = showAlert.visible && (_jsx(StatusAlert, { message: showAlert.message, type: showAlert.type, onClose: () => setShowAlert(prev => ({ ...prev, visible: false })) }));
+    // Common content components
+    const statsComparisonComponent = (_jsx(StatsComparison, { stats: state.stats, onUpdateProgress: handleSubmit, dailyData: dailyProgress, activityLogs: activityLogs }));
+    const activityLogsComponent = (_jsx(ActivityLogs, { logs: activityLogs, userNames: {
+            user1: state.stats.user1.name,
+            user2: state.stats.user2.name
+        }, onRefresh: refreshData }));
+    const progressComponent = (_jsx(DualUserProgress, { user1: {
+            name: state.stats.user1.name,
+            current: getTodaysTotals(activityLogs).user1.completed,
+            color: "#2563eb"
+        }, user2: {
+            name: state.stats.user2.name,
+            current: getTodaysTotals(activityLogs).user2.completed,
+            color: "#7242eb"
+        }, target: DAILY_TARGET }));
+    return (_jsxs(_Fragment, { children: [_jsx(Toaster, { position: "top-center", richColors: true, expand: true, closeButton: true }), _jsxs("div", { className: "flex flex-col gap-6 lg:hidden", children: [alertComponent, _jsx("div", { className: "w-full", children: progressComponent }), _jsx("div", { className: "w-full", children: statsComparisonComponent }), _jsx("div", { className: "w-full", children: activityLogsComponent })] }), _jsxs("div", { className: "hidden lg:grid grid-rows-[auto_1fr] gap-6 w-full max-w-[1600px] mx-auto", children: [_jsx("div", { className: "row-span-1 w-full", children: progressComponent }), _jsxs("div", { className: "grid grid-cols-2 gap-6 justify-center items-start", children: [statsComparisonComponent, activityLogsComponent] })] })] }));
 };
 export default QBankTracker;

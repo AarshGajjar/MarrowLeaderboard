@@ -15,6 +15,8 @@ interface UserStats {
   completed: number;
   correct: number;
   name: string;
+  date?: string;
+  accuracy?: number;
 }
 
 const DAILY_TARGET = 200;
@@ -22,27 +24,6 @@ const DAILY_TARGET = 200;
 type UserKey = 'user1' | 'user2';
 type AlertType = 'success' | 'error';
 
-interface StatsComparisonProps {
-  stats: {
-    user1: UserStats;
-    user2: UserStats;
-  };
-  onUpdateProgress: (user: UserKey, completed: number, correct: number) => Promise<void>;
-  showPasswordInput: {
-    user1: boolean;
-    user2: boolean;
-  };
-  setShowPasswordInput: (user: UserKey, value: boolean) => void;
-  passwordState: {
-    user1: string;
-    user2: string;
-  };
-  onPasswordChange: (user: UserKey, value: string) => void;
-  error: {
-    user1: string;
-    user2: string;
-  };
-}
 
 interface SectionHeaderProps {
   title: string;
@@ -57,16 +38,9 @@ interface StatusAlertProps {
   onClose: () => void;
 }
 
-interface UserProgress {
-  completed: number;
-  correct: number;
-  date: string;
-  accuracy: number;
-}
-
 interface DailyData {
-  user1Data: UserProgress;
-  user2Data: UserProgress;
+  user1Data: UserStats;
+  user2Data: UserStats;
   date: string;
 }
 
@@ -134,50 +108,6 @@ const calculateMetrics = (stats: UserStats) => {
   };
 };
 
-const determineLeader = (
-  user1Metrics: ReturnType<typeof calculateMetrics>,
-  user2Metrics: ReturnType<typeof calculateMetrics>
-): ComparisonResult => {
-  const compareAndGetLeader = (value1: number, value2: number): UserKey => {
-    return value1 >= value2 ? 'user1' : 'user2';
-  };
-
-  const comparisons = {
-    accuracy: {
-      diff: user1Metrics.accuracy - user2Metrics.accuracy,
-      leader: compareAndGetLeader(user1Metrics.accuracy, user2Metrics.accuracy),
-      metric: 'accuracy',
-      value: Math.abs(user1Metrics.accuracy - user2Metrics.accuracy).toFixed(1) + '%'
-    },
-    volume: {
-      diff: user1Metrics.questionsPerDay - user2Metrics.questionsPerDay,
-      leader: compareAndGetLeader(user1Metrics.questionsPerDay, user2Metrics.questionsPerDay),
-      metric: 'questions',
-      value: Math.abs(user1Metrics.questionsPerDay - user2Metrics.questionsPerDay).toString()
-    },
-    points: {
-      diff: user1Metrics.points - user2Metrics.points,
-      leader: compareAndGetLeader(user1Metrics.points, user2Metrics.points),
-      metric: 'points',
-      value: Math.abs(user1Metrics.points - user2Metrics.points).toString()
-    },
-    effectiveScore: {
-      diff: user1Metrics.effectiveScore - user2Metrics.effectiveScore,
-      leader: compareAndGetLeader(user1Metrics.effectiveScore, user2Metrics.effectiveScore),
-      metric: 'correct',
-      value: Math.abs(user1Metrics.effectiveScore - user2Metrics.effectiveScore).toString()
-    }
-  } as const;
-
-  const overallLeader: UserKey = compareAndGetLeader(user1Metrics.points, user2Metrics.points);
-  
-  return {
-    overallLeader,
-    comparisons,
-    user1Metrics,
-    user2Metrics
-  };
-};
 
 interface Comparison {
   diff: number;
@@ -206,16 +136,6 @@ const getISTDate = () => {
   return istDate.toISOString().split('T')[0];
 };
 
-const formatDate = (timestamp: string): string => {
-  const date = new Date(timestamp);
-  return date.toLocaleString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  });
-};
 
 const isSameDate = (date1: string, date2: string): boolean => {
   const d1 = new Date(date1);
@@ -227,52 +147,11 @@ const isSameDate = (date1: string, date2: string): boolean => {
   );
 };
 
-const getMetricIcon = (metric: string): React.ReactNode => {
-  switch (metric) {
-    case 'accuracy':
-      return <Crosshair className="w-4 h-4" />;
-    case 'questions':
-      return <Award className="w-4 h-4" />;
-    case 'correct':
-      return <Check className="w-4 h-4" />;
-    default:
-      return null;
-  }
-};
 
-const convertToDailyData = (progress: DailyProgress[]): DailyData[] => {
-  return progress.map(p => ({
-    date: p.date,
-    user1Data: {
-      completed: p.user1Completed,
-      correct: p.user1Correct,
-      date: p.date,
-      accuracy: p.user1Completed > 0 ? (p.user1Correct / p.user1Completed) * 100 : 0
-    },
-    user2Data: {
-      completed: p.user2Completed,
-      correct: p.user2Correct,
-      date: p.date,
-      accuracy: p.user2Completed > 0 ? (p.user2Correct / p.user2Completed) * 100 : 0
-    }
-  }));
-};
   // Section toggle component
-  const SectionHeader: React.FC<SectionHeaderProps> = ({ title, isExpanded, onToggle, icon }) => (
-    <div
-      className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
-      onClick={onToggle}
-    >
-      <div className="flex items-center gap-2">
-        {icon}
-        <h3 className="font-medium">{title}</h3>
-      </div>
-      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-    </div>
-  );
 
   // Alert component
-  const StatusAlert: React.FC<StatusAlertProps> = ({ message, type, onClose }) => (
+  const StatusAlert: React.FC<StatusAlertProps> = ({ message, type }) => (
     <Alert className={`${type === 'success' ? 'bg-green-50' : 'bg-red-50'} mb-4`}>
       <div className="flex items-center gap-2">
         {type === 'success' ? (
@@ -506,35 +385,65 @@ const QBankTracker: React.FC = () => {
     fetchDailyProgress();
   }, []);
 
-  const LeftColumn = () => (
-    <div className="space-y-6">
-      {showAlert.visible && (
-        <StatusAlert
-          message={showAlert.message}
-          type={showAlert.type}
-          onClose={() => setShowAlert(prev => ({ ...prev, visible: false }))}
-        />
-      )}
-      <StatsComparison
-        stats={state.stats}
-        onUpdateProgress={handleSubmit}
-        dailyData={dailyProgress}
-        activityLogs={activityLogs}
-      />
-    </div>
+  const getTodaysTotals = (logs: ActivityLog[]) => {
+    const today = getISTDate();
+    return logs.reduce((acc, log) => {
+      if (isSameDate(log.timestamp, today)) {
+        const userKey = log.user_type as UserKey;
+        acc[userKey].completed += log.completed;
+        acc[userKey].correct += log.correct;
+      }
+      return acc;
+    }, {
+      user1: { completed: 0, correct: 0 },
+      user2: { completed: 0, correct: 0 }
+    });
+  };
+
+  // Common alert component
+  const alertComponent = showAlert.visible && (
+    <StatusAlert
+      message={showAlert.message}
+      type={showAlert.type}
+      onClose={() => setShowAlert(prev => ({ ...prev, visible: false }))}
+    />
   );
 
-  const RightColumn = () => (
-    <div className="space-y-6">
-      <ActivityLogs
-        logs={activityLogs}
-        userNames={{
-          user1: state.stats.user1.name,
-          user2: state.stats.user2.name
-        }}
-        onRefresh={refreshData}
-      />
-    </div>
+  // Common content components
+  const statsComparisonComponent = (
+    <StatsComparison
+      stats={state.stats}
+      onUpdateProgress={handleSubmit}
+      dailyData={dailyProgress}
+      activityLogs={activityLogs}
+    />
+  );
+
+  const activityLogsComponent = (
+    <ActivityLogs
+      logs={activityLogs}
+      userNames={{
+        user1: state.stats.user1.name,
+        user2: state.stats.user2.name
+      }}
+      onRefresh={refreshData}
+    />
+  );
+
+  const progressComponent = (
+    <DualUserProgress
+      user1={{
+        name: state.stats.user1.name,
+        current: getTodaysTotals(activityLogs).user1.completed,
+        color: "#2563eb"
+      }}
+      user2={{
+        name: state.stats.user2.name,
+        current: getTodaysTotals(activityLogs).user2.completed,
+        color: "#7242eb"
+      }}
+      target={DAILY_TARGET}
+    />
   );
 
   return (
@@ -545,73 +454,20 @@ const QBankTracker: React.FC = () => {
         expand 
         closeButton 
       />
-      <div className="lg:hidden space-y-6">
-        {showAlert.visible && (
-          <StatusAlert
-            message={showAlert.message}
-            type={showAlert.type}
-            onClose={() => setShowAlert(prev => ({ ...prev, visible: false }))}
-          />
-        )}
-        <StatsComparison
-          stats={state.stats}
-          onUpdateProgress={handleSubmit}
-          dailyData={dailyProgress}
-          activityLogs={activityLogs}
-        />
-        <DualUserProgress
-          user1={{
-            name: state.stats.user1.name,
-            current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user1Completed : 0,
-            color: "#2563eb"
-          }}
-          user2={{
-            name: state.stats.user2.name,
-            current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user2Completed : 0,
-            color: "#7242eb"
-          }}
-          target={DAILY_TARGET}
-        />
-        <ActivityLogs
-          logs={activityLogs}
-          userNames={{
-            user1: state.stats.user1.name,
-            user2: state.stats.user2.name
-          }}
-          onRefresh={refreshData}
-        />
+      {/* Mobile layout */}
+      <div className="flex flex-col gap-6 lg:hidden">
+        {alertComponent}
+        <div className="w-full">{progressComponent}</div>
+        <div className="w-full">{statsComparisonComponent}</div>
+        <div className="w-full">{activityLogsComponent}</div>
       </div>
 
       {/* Desktop layout */}
-      <div className="hidden lg:flex flex-col gap-6 w-full">
-      <DualUserProgress
-          user1={{
-            name: state.stats.user1.name,
-            current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user1Completed : 0,
-            color: "#2563eb"
-          }}
-          user2={{
-            name: state.stats.user2.name,
-            current: dailyProgress.length > 0 ? dailyProgress[dailyProgress.length - 1].user2Completed : 0,
-            color: "#7242eb"
-          }}
-          target={DAILY_TARGET}
-        />
-        <div className="grid grid-cols-2 gap-6">
-          <StatsComparison
-            stats={state.stats}
-            onUpdateProgress={handleSubmit}
-            dailyData={dailyProgress}
-            activityLogs={activityLogs}
-          />
-          <ActivityLogs
-            logs={activityLogs}
-            userNames={{
-              user1: state.stats.user1.name,
-              user2: state.stats.user2.name
-            }}
-            onRefresh={refreshData}
-          />
+      <div className="hidden lg:grid grid-rows-[auto_1fr] gap-6 w-full max-w-[1600px] mx-auto">
+        <div className="row-span-1 w-full">{progressComponent}</div>
+        <div className="grid grid-cols-2 gap-6 justify-center items-start">
+          {statsComparisonComponent}
+          {activityLogsComponent}
         </div>
       </div>
     </>

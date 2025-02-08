@@ -195,229 +195,232 @@ const StatsComparison: React.FC<{
 
   return (
     <>
-      <Card className="w-full max-w-2xl shadow-lg rounded-lg overflow-hidden bg-gradient-to-br from-white/80 via-white/90 to-white/80 dark:from-slate-900/80 dark:via-slate-900/90 dark:to-slate-900/80 backdrop-blur-sm border border-white/20 dark:border-slate-800/20">
-      <CardHeader className="border-b p-4 bg-gradient-to-r from-purple-600/10 to-blue-600/10 dark:from-purple-900/20 dark:to-blue-900/20">
-        <div className="flex items-center justify-between">
+      <Card className="relative w-full shadow-lg rounded-lg bg-gradient-to-br from-white/80 via-white/90 to-white/80 dark:from-slate-900/80 dark:via-slate-900/90 dark:to-slate-900/80 backdrop-blur-sm border border-white/20 dark:border-slate-800/20">
+        <CardHeader className="border-b p-4 bg-gradient-to-r from-purple-600/10 to-blue-600/10 dark:from-purple-900/20 dark:to-blue-900/20">
+          <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
               <Swords className="w-5 h-5 text-amber-500" />
               <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                 Battle Arena
               </span>
             </CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className="p-4 sm:p-6">
-        {/* Header section with flexible spacing */}
-        <div className="flex flex-row justify-between items-start mb-8 gap-2">
-          {/* User 1 Header */}
-          <div className="flex-1">
-            <div className="text-center space-y-2">
-                <h3 className="font-semibold text-xl text-[#7242eb] dark:text-purple-400 px-3 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-800 shadow-sm">
-                {stats.user1.name}
-                </h3>
-              <div className="flex flex-col sm:flex-row justify-center gap-1 sm:gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => { setActiveUser('user1'); setIsDialogOpen(true); }}
-                  className="hover:bg-purple-50 border-purple-600/20 text-xs sm:text-sm w-full sm:w-auto"
-                >
-                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-purple-600" />
-                  <span className="text-purple-600">Add</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => { setSelectedProgressUser('user1'); setShowProgress(true); }}
-                  className="hover:bg-blue-50 border-blue-600/20 text-xs sm:text-sm w-full sm:w-auto"
-                >
-                  <ChartLine className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-blue-600" />
-                  <span className="text-blue-600">Stats</span>
-                </Button>
-              </div>
-            </div>
           </div>
-          
-          {/* VS Header */}
-          <div className="flex-shrink-0 w-16 sm:w-24">
-            <div className="text-center">
-              <div className="relative">
-                <div className="absolute inset-0 bg-slate-100/50 dark:bg-slate-800/50 rounded-full transform -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 w-8 sm:w-12 h-8 sm:h-12"></div>
-                <button 
-                  onClick={() => setIsRadarChartOpen(true)}
-                  className="text-base sm:text-lg font-semibold text-purple-600/70 relative z-10 p-2 hover:text-blue-600 transition-colors"
-                >
-                  VS
-                </button>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6 flex flex-col items-stretch overflow-x-auto">
+          <div className="min-w-0 w-full space-y-4">
+            {/* Header section */}
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4 sm:gap-2">
+              {/* User 1 Header */}
+              <div className="w-full sm:flex-1">
+                <div className="text-center space-y-2">
+                  <h3 className="font-semibold text-xl text-[#7242eb] dark:text-purple-400 px-3 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-800 shadow-sm">
+                    {stats.user1.name}
+                  </h3>
+                  <div className="flex flex-col sm:flex-row justify-center gap-1 sm:gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => { setActiveUser('user1'); setIsDialogOpen(true); }}
+                      className="hover:bg-purple-50 border-purple-600/20 text-xs sm:text-sm w-full sm:w-auto"
+                    >
+                      <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-purple-600" />
+                      <span className="text-purple-600">Add</span>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => { setSelectedProgressUser('user1'); setShowProgress(true); }}
+                      className="hover:bg-blue-50 border-blue-600/20 text-xs sm:text-sm w-full sm:w-auto"
+                    >
+                      <ChartLine className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-blue-600" />
+                      <span className="text-blue-600">Stats</span>
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-center mt-2">
-                <div className="relative">
-                  <UserStatsRadarChart 
-                    user1={{
-                      name: stats.user1.name,
-                      total: stats.user1.completed,
-                      correct: stats.user1.correct,
-                      accuracy: user1Metrics.accuracy,
-                      dailyAverage: user1DailyAverage,
-                      consistency: user1ConsistencyAndStreak.consistency,
-                      streak: user1ConsistencyAndStreak.streak
-                    }}
-                    user2={{
-                      name: stats.user2.name,
-                      total: stats.user2.completed,
-                      correct: stats.user2.correct,
-                      accuracy: user2Metrics.accuracy,
-                      dailyAverage: user2DailyAverage,
-                      consistency: user2ConsistencyAndStreak.consistency,
-                      streak: user2ConsistencyAndStreak.streak
-                    }}
-                    isOpen={isRadarChartOpen}
-                    onOpenChange={setIsRadarChartOpen}
-                  />
+              
+              {/* VS Header */}
+              <div className="w-16 sm:w-24 flex-shrink-0">
+                <div className="text-center">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-slate-100/50 dark:bg-slate-800/50 rounded-full transform -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 w-8 sm:w-12 h-8 sm:h-12"></div>
+                    <button 
+                      onClick={() => setIsRadarChartOpen(true)}
+                      className="text-base sm:text-lg font-semibold text-purple-600/70 relative z-10 p-2 hover:text-blue-600 transition-colors"
+                    >
+                      VS
+                    </button>
+                  </div>
+                  <div className="flex justify-center mt-2">
+                    <div className="relative">
+                      <UserStatsRadarChart 
+                        user1={{
+                          name: stats.user1.name,
+                          total: stats.user1.completed,
+                          correct: stats.user1.correct,
+                          accuracy: user1Metrics.accuracy,
+                          dailyAverage: user1DailyAverage,
+                          consistency: user1ConsistencyAndStreak.consistency,
+                          streak: user1ConsistencyAndStreak.streak
+                        }}
+                        user2={{
+                          name: stats.user2.name,
+                          total: stats.user2.completed,
+                          correct: stats.user2.correct,
+                          accuracy: user2Metrics.accuracy,
+                          dailyAverage: user2DailyAverage,
+                          consistency: user2ConsistencyAndStreak.consistency,
+                          streak: user2ConsistencyAndStreak.streak
+                        }}
+                        isOpen={isRadarChartOpen}
+                        onOpenChange={setIsRadarChartOpen}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* User 2 Header */}
+              <div className="w-full sm:flex-1">
+                <div className="text-center space-y-2">
+                  <h3 className="font-semibold text-xl text-[#4287eb] dark:text-blue-400 px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800 shadow-sm">
+                    {stats.user2.name}
+                  </h3>
+                  <div className="flex flex-col sm:flex-row justify-center gap-1 sm:gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => { setActiveUser('user2'); setIsDialogOpen(true); }}
+                      className="hover:bg-purple-50 border-purple-600/20 text-xs sm:text-sm w-full sm:w-auto"
+                    >
+                      <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-purple-600" />
+                      <span className="text-purple-600">Add</span>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => { setSelectedProgressUser('user2'); setShowProgress(true); }}
+                      className="hover:bg-blue-50 border-blue-600/20 text-xs sm:text-sm w-full sm:w-auto"
+                    >
+                      <ChartLine className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-blue-600" />
+                      <span className="text-blue-600">Stats</span>
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          
-          {/* User 2 Header */}
-          <div className="flex-1">
-            <div className="text-center space-y-2">
-            <h3 className="font-semibold text-xl text-[#4287eb] dark:text-blue-400 px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800 shadow-sm">
-              {stats.user2.name}
-            </h3>
-              <div className="flex flex-col sm:flex-row justify-center gap-1 sm:gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => { setActiveUser('user2'); setIsDialogOpen(true); }}
-                  className="hover:bg-purple-50 border-purple-600/20 text-xs sm:text-sm w-full sm:w-auto"
-                >
-                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-purple-600" />
-                  <span className="text-purple-600">Add</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => { setSelectedProgressUser('user2'); setShowProgress(true); }}
-                  className="hover:bg-blue-50 border-blue-600/20 text-xs sm:text-sm w-full sm:w-auto"
-                >
-                  <ChartLine className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-blue-600" />
-                  <span className="text-blue-600">Stats</span>
-                </Button>
-              </div>
+
+            {/* Comparisons */}
+            <div className="space-y-4 w-full">
+              <ComparisonBar 
+                label="Total Completed"
+                value1={stats.user1.completed}
+                value2={stats.user2.completed}
+              />
+              <ComparisonBar 
+                label="Correct Answers"
+                value1={stats.user1.correct}
+                value2={stats.user2.correct}
+              />
+              <ComparisonBar 
+                label="Accuracy"
+                value1={user1Metrics.accuracy}
+                value2={user2Metrics.accuracy}
+                unit="%"
+              />
             </div>
-          </div>
-        </div>
 
-          {/* Comparisons */}
-          <div className="space-y-4">
-            <ComparisonBar 
-              label="Total Completed"
-              value1={stats.user1.completed}
-              value2={stats.user2.completed}
-            />
-            <ComparisonBar 
-              label="Correct Answers"
-              value1={stats.user1.correct}
-              value2={stats.user2.correct}
-            />
-            <ComparisonBar 
-              label="Accuracy"
-              value1={user1Metrics.accuracy}
-              value2={user2Metrics.accuracy}
-              unit="%"
-            />
-          </div>
+            {/* Leader Banner */}
+            <div className="mt-8 flex justify-center w-full">
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger>
+                    <div className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:to-yellow-800/30 rounded-lg shadow-sm cursor-help">
+                      <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 dark:text-yellow-400" />
+                      <span className="text-sm sm:text-base font-medium text-slate-700 dark:text-slate-200">
+                        {stats[leader].name} leads by {pointsDiff} points
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs" side="top">
+                    <p className="text-xs sm:text-sm">Points = Questions Completed + +2% points per 1% accuracy above 80%</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
 
-          {/* Leader Banner */}
-          <div className="mt-8 flex justify-center">
-          <TooltipProvider>
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger>
-                <div className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:to-yellow-800/30 rounded-lg shadow-sm cursor-help">
-                  <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 dark:text-yellow-400" />
-                  <span className="text-sm sm:text-base font-medium text-slate-700 dark:text-slate-200">
-                    {stats[leader].name} leads by {pointsDiff} points
-                  </span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs" side="top">
-                <p className="text-xs sm:text-sm">Points = Questions Completed + +2% points per 1% accuracy above 80%</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) {
-              setActiveUser(null);
-              setIsPasswordMode(true);
-              setError('');
-              setInputs({ completed: '', correct: '' });
-            }
-          }}>
-            <DialogContent className="sm:max-w-[325px]">
-              <DialogHeader>
-                <DialogTitle>Add {activeUser === 'user1' ? stats.user1.name : stats.user2.name}'s progress</DialogTitle>
-              </DialogHeader>
-              {isPasswordMode ? (
-                <div className="space-y-4">
-                  <Input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Password"
-                    className="text-lg tracking-wider"
-                  />
-                  <Button className="w-full" onClick={handlePasswordSubmit}>Verify</Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <Input
-                    type="number"
-                    placeholder="Questions Completed"
-                    value={inputs.completed}
-                    onChange={(e) => setInputs(prev => ({ ...prev, completed: e.target.value }))}
-                    className="text-lg"
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Correct Answers"
-                    value={inputs.correct}
-                    onChange={(e) => setInputs(prev => ({ ...prev, correct: e.target.value }))}
-                    className="text-lg"
-                  />
-                  <Button className="w-full" onClick={handleSubmit} disabled={isSubmitting}>{isSubmitting ? 'Updating...' : 'Add'}</Button>
-                </div>
-              )}
-              {error && <p className="text-sm text-rose-600 text-center">{error}</p>}
-            </DialogContent>
-          </Dialog>
-
-          <ProgressPopup
-            isOpen={showProgress}
-            onClose={() => setShowProgress(false)}
-            dailyData={dailyData.map(p => ({
-              date: p.date,
-              user1Data: {
-                completed: p.user1Completed,
-                correct: p.user1Correct,
-                date: p.date,
-                accuracy: p.user1Completed > 0 ? (p.user1Correct / p.user1Completed) * 100 : 0
-              },
-              user2Data: {
-                completed: p.user2Completed,
-                correct: p.user2Correct,
-                date: p.date,
-                accuracy: p.user2Completed > 0 ? (p.user2Correct / p.user2Completed) * 100 : 0
+            {/* Dialogs */}
+            <Dialog open={isDialogOpen} onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) {
+                setActiveUser(null);
+                setIsPasswordMode(true);
+                setError('');
+                setInputs({ completed: '', correct: '' });
               }
-            }))}
-            user1Name={stats.user1.name}
-            user2Name={stats.user2.name}
-            selectedUser={selectedProgressUser}
-            activityLogs={activityLogs}
-          />
+            }}>
+              <DialogContent className="sm:max-w-[325px]">
+                <DialogHeader>
+                  <DialogTitle>Add {activeUser === 'user1' ? stats.user1.name : stats.user2.name}'s progress</DialogTitle>
+                </DialogHeader>
+                {isPasswordMode ? (
+                  <div className="space-y-4">
+                    <Input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Password"
+                      className="text-lg tracking-wider"
+                    />
+                    <Button className="w-full" onClick={handlePasswordSubmit}>Verify</Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <Input
+                      type="number"
+                      placeholder="Questions Completed"
+                      value={inputs.completed}
+                      onChange={(e) => setInputs(prev => ({ ...prev, completed: e.target.value }))}
+                      className="text-lg"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Correct Answers"
+                      value={inputs.correct}
+                      onChange={(e) => setInputs(prev => ({ ...prev, correct: e.target.value }))}
+                      className="text-lg"
+                    />
+                    <Button className="w-full" onClick={handleSubmit} disabled={isSubmitting}>{isSubmitting ? 'Updating...' : 'Add'}</Button>
+                  </div>
+                )}
+                {error && <p className="text-sm text-rose-600 text-center">{error}</p>}
+              </DialogContent>
+            </Dialog>
+
+            <ProgressPopup
+              isOpen={showProgress}
+              onClose={() => setShowProgress(false)}
+              dailyData={dailyData.map(p => ({
+                date: p.date,
+                user1Data: {
+                  completed: p.user1Completed,
+                  correct: p.user1Correct,
+                  date: p.date,
+                  accuracy: p.user1Completed > 0 ? (p.user1Correct / p.user1Completed) * 100 : 0
+                },
+                user2Data: {
+                  completed: p.user2Completed,
+                  correct: p.user2Correct,
+                  date: p.date,
+                  accuracy: p.user2Completed > 0 ? (p.user2Correct / p.user2Completed) * 100 : 0
+                }
+              }))}
+              user1Name={stats.user1.name}
+              user2Name={stats.user2.name}
+              selectedUser={selectedProgressUser}
+              activityLogs={activityLogs}
+            />
+          </div>
         </CardContent>
       </Card>
     </>
