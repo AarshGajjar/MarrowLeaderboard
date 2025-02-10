@@ -2,17 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { SunIcon, MoonIcon } from '@heroicons/react/24/solid';
 
 const DarkModeToggle = () => {
-  const [isDarkMode, setIsDarkMode] = useState(true);  // Changed to true
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
-    const storedTheme = localStorage.getItem('theme');
-    if (storedTheme === 'light') {
-      setIsDarkMode(false);
-    } else {
-      // Default to dark mode
-      setIsDarkMode(true);
-      localStorage.setItem('theme', 'dark');
-    }
+    
+      // Check if current time is between 7 PM and 7 AM
+      const currentHour = new Date().getHours();
+      const shouldBeDark = currentHour >= 19 || currentHour < 7;
+      setIsDarkMode(shouldBeDark);
+      localStorage.setItem('theme', shouldBeDark ? 'dark' : 'light');
+    
   }, []);
 
   useEffect(() => {

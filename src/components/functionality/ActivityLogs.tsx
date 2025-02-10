@@ -351,6 +351,24 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
     localStorage.setItem('activityLogNotifications', JSON.stringify(notifications));
   }, [notifications]);
 
+  const calculateDotSize = (completed: number, options: {
+    minSize?: number;
+    maxSize?: number;
+    nonLinearExponent?: number;
+  } = {}): number => {
+    const {
+      minSize = 0.01, 
+      maxSize = 0.10, 
+      nonLinearExponent = 1.5 // Non-linear scaling
+    } = options;
+  
+    const maxQuestions = Math.max(...filteredLogs.map(log => log.completed));
+    if (maxQuestions === 0) return minSize;
+  
+    const normalizedCompletion = completed / maxQuestions;
+    return minSize + Math.pow(normalizedCompletion, nonLinearExponent) * (maxSize - minSize);
+  };
+
   // UI Component rendering
   return (
     <Card className="w-full shadow-lg rounded-lg bg-gradient-to-br from-white/80 via-white/90 to-white/80 dark:from-slate-900/80 dark:via-slate-900/90 dark:to-slate-900/80 backdrop-blur-sm border border-white/20 dark:border-slate-800/20">
@@ -638,14 +656,15 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
                       </linearGradient>
                     </defs>
 
-                    {/* Update log markers to use primary/secondary colors */}
+                    {/* Replace the log markers section in the clock view with this updated version */}
                     {filteredLogs.map((log) => {
                       const { x, y } = getLogPosition(log.timestamp);
+                      const dotSize = calculateDotSize(log.completed);
                       
                       return (
                         <g key={log.id} transform={`translate(${x}, ${y})`}>
                           <circle
-                            r="0.05"
+                            r={dotSize}
                             fill={log.user_type === 'user1' ? 'rgb(147 51 234)' : 'rgb(37 99 235)'}
                             stroke="hsl(var(--background))"
                             strokeWidth="0.01"
