@@ -435,12 +435,12 @@ const QBankTracker: React.FC = () => {
       user1={{
         name: state.stats.user1.name,
         current: getTodaysTotals(activityLogs).user1.completed,
-        color: "#2563eb"
+        color: "#7242eb"
       }}
       user2={{
         name: state.stats.user2.name,
         current: getTodaysTotals(activityLogs).user2.completed,
-        color: "#7242eb"
+        color: "#2563eb"
       }}
       target={DAILY_TARGET}
     />

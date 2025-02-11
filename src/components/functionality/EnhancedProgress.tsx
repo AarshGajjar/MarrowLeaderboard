@@ -18,10 +18,12 @@ interface DualUserProgressProps {
   target: number;
 }
 
-const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1, user2, target }) => {
-  const [hoveredUser, setHoveredUser] = useState<string | null>(null);
+const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1: rawUser1, user2: rawUser2, target }) => {
+  // Override the colors to ensure correct assignment
+  const user1 = { ...rawUser1, color: '#9333ea' }; // Purple
+  const user2 = { ...rawUser2, color: '#3b82f6' }; // Blue
 
-  const getLeadingUser = () => user1.current >= user2.current ? user1.name : user2.name;
+  const [hoveredUser, setHoveredUser] = useState<string | null>(null);
 
   // Calculate maxProgress considering target and both users' current values
   const maxProgress = Math.max(user1.current, user2.current, target);
@@ -183,9 +185,7 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1, user2, targe
     isTargetReached, 
     questionsLeft,
     extraProgress,
-    isLeading,
-    isFirstUser
-  }: UserIndicatorProps) => {
+    isLeading  }: UserIndicatorProps) => {
     const displayPosition = Math.min(Math.max(position, 0), 100);
     
     const baseClassName = "absolute flex flex-col items-center transition-transform duration-300 ease-in-out";
@@ -258,36 +258,36 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1, user2, targe
         <div className="h-3 w-full rounded-full bg-muted overflow-hidden shadow-inner dark:bg-slate-800">
         {[user1Stats, user2Stats].map((stats, index) => {
           const user = index === 0 ? user1 : user2;
-          const gradientColors = index === 0
-          ? 'from-purple-400 to-purple-600 dark:from-purple-400 dark:to-purple-600'
-          : 'from-blue-400 to-blue-600 dark:from-blue-400 dark:to-blue-600';
+          const gradientColors = user === user1
+            ? 'from-purple-400 to-purple-600 dark:from-purple-400 dark:to-purple-600'
+            : 'from-blue-400 to-blue-600 dark:from-blue-400 dark:to-blue-600';
           
           const relativeWidth = (user.current / maxProgress) * 100;
           const isLeading = user.current >= (index === 0 ? user2.current : user1.current);
           
           const barClassName = `absolute h-full transition-all duration-1000 ease-in-out bg-gradient-to-r ${gradientColors} ${
-          hoveredUser === user.name ? 'z-20' : 
-          hoveredUser === null && isLeading ? 'z-10' : 'z-0'
+            hoveredUser === user.name ? 'z-20' : 
+            hoveredUser === null && isLeading ? 'z-10' : 'z-0'
           }`;
 
           return (
-          <div key={user.name} 
-            className={barClassName}
-            style={{ width: `${relativeWidth}%` }}
-          >
-            <div 
-            className="absolute right-0 top-1/2 w-4 h-4 rounded-full will-change-transform"
-            style={{
-              background: index === 0
-              ? 'radial-gradient(circle at center, #a855f7, #9333ea)'
-              : 'radial-gradient(circle at center, #60a5fa, #3b82f6)',
-              transform: 'translate(50%, -50%)',
-              boxShadow: index === 0 
-              ? '0 0 10px rgba(168, 85, 247, 0.5)' 
-              : '0 0 10px rgba(96, 165, 250, 0.5)',
-            }}
-            />
-          </div>
+            <div key={user.name} 
+              className={barClassName}
+              style={{ width: `${relativeWidth}%` }}
+            >
+              <div 
+                className="absolute right-0 top-1/2 w-4 h-4 rounded-full will-change-transform"
+                style={{
+                  background: user === user1
+                    ? 'radial-gradient(circle at center, #a855f7, #9333ea)'
+                    : 'radial-gradient(circle at center, #60a5fa, #3b82f6)',
+                  transform: 'translate(50%, -50%)',
+                  boxShadow: user === user1
+                    ? '0 0 10px rgba(168, 85, 247, 0.5)' 
+                    : '0 0 10px rgba(96, 165, 250, 0.5)',
+                }}
+              />
+            </div>
           );
         })}
         </div>
@@ -311,6 +311,24 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1, user2, targe
         isFirstUser={false}
         />
       </div>
+      <div className="mt-4 text-center text-sm text-muted-foreground">
+            {(() => {
+            if (user1.current === user2.current) {
+              return null;
+            }
+            const leaderInfo = user1.current > user2.current 
+              ? { name: user1.name, color: user1.color, questions: user1.current }
+              : { name: user2.name, color: user2.color, questions: user2.current };
+            return (
+              <>
+              <span className="font-medium" style={{ color: leaderInfo.color }}>
+                {leaderInfo.name}
+              </span>
+              <span> is leading with {Math.abs(user1.current - user2.current)} questions today!</span>
+              </>
+            );
+            })()}
+        </div>
       </CardContent>
     </Card>
   );
