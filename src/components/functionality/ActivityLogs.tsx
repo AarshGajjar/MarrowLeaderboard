@@ -7,6 +7,7 @@ import { Clock, RefreshCw, List, Bell, BellOff } from 'lucide-react';
 import marrowIcon from '@/assets/marrow.png';
 import CrossPlatformNotifications from './CrossPlatformNotifications';
 import InAppNotification from './InAppNotification';
+import emailjs from '@emailjs/browser';
 
 // Core interfaces defining the structure of activity logs and component props
 interface ActivityLog {
@@ -85,18 +86,48 @@ const getCurrentDate = () => {
   return istTime.toISOString().split('T')[0];
 };
 
-// Utility class for SMS notifications
-class SMSNotificationService {
-  private accountSid = 'ACf87eee8276b81fd9f2d36193bc48413a';
-  private authToken = '4f4c407f1ec29f584c0df413bda26ddc';
-  private messagingServiceSid = 'MG03ffa7c19b6e66198a8ea18396b53562';
-  private phoneNumbers = ['+919998990677', '+919081256456'];
+// Email Notifications
+class EmailNotificationService {
   private lastSentLogIds: Set<number> = new Set();
   private processingLogs: Set<number> = new Set();
   private lastMessageTime: number = 0;
-  private minDelayBetweenMessages: number = 1000; // 1 second minimum delay between messages
+  private minDelayBetweenMessages: number = 1000;
 
-  private async rateLimitedFetch(url: string, options: RequestInit): Promise<Response> {
+  private readonly EMAIL_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+  private readonly EMAIL_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+  private readonly EMAIL_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+  private readonly RECIPIENT_EMAILS = ['aarshgajjar16@gmail.com', 'charaniyaaman3@gmail.com'];
+
+  constructor() {
+    emailjs.init(this.EMAIL_PUBLIC_KEY);
+    // Try to load previously sent notifications from localStorage
+    this.loadSentNotifications();
+    // Set up storage event listener for cross-tab communication
+    window.addEventListener('storage', this.handleStorageChange);
+  }
+
+  private handleStorageChange = (event: StorageEvent) => {
+    if (event.key === 'lastSentNotifications') {
+      this.loadSentNotifications();
+    }
+  };
+
+  private loadSentNotifications() {
+    const saved = localStorage.getItem('lastSentNotifications');
+    if (saved) {
+      const savedIds = JSON.parse(saved);
+      this.lastSentLogIds = new Set(savedIds);
+    }
+  }
+
+  private saveSentNotification(logId: number) {
+    this.lastSentLogIds.add(logId);
+    localStorage.setItem('lastSentNotifications', 
+      JSON.stringify(Array.from(this.lastSentLogIds))
+    );
+  }
+
+  private async rateLimitedSend(emailData: any): Promise<void> {
     const now = Date.now();
     const timeToWait = Math.max(0, this.minDelayBetweenMessages - (now - this.lastMessageTime));
     
@@ -105,94 +136,119 @@ class SMSNotificationService {
     }
     
     this.lastMessageTime = Date.now();
-    return fetch(url, options);
+    await emailjs.send(this.EMAIL_SERVICE_ID, this.EMAIL_TEMPLATE_ID, emailData);
   }
 
-  async sendSMS(message: string, logId: number): Promise<void> {
-    // Check if this log has already been sent
-    if (this.lastSentLogIds.has(logId)) {
+  private formatSection(title: string, content: string): string {
+    return `
+      <div style="margin-bottom: 15px;">
+        <strong style="color: #6366f1;">${title}</strong>
+        <div style="margin-top: 5px; color: #374151;">${content}</div>
+      </div>
+    `;
+  }
+
+  formatActivityMessage(
+    log: ActivityLog, 
+    userNames: { user1: string; user2: string }, 
+    totals: { user1: number; user2: number }
+  ): string {
+    const userName = userNames[log.user_type];
+    const accuracy = calculateAccuracy(log.correct, log.completed);
+    const time = new Date(log.timestamp).toLocaleTimeString('en-IN', { 
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false 
+    });
+
+    const leader = totals.user1 > totals.user2 ? userNames.user1 : userNames.user2;
+    const difference = Math.abs(totals.user1 - totals.user2);
+
+    const sections = [
+      // Main activity message without redundant heading
+      `<div style="margin-bottom: 15px; color: #374151;">
+        ${userName} completed ${log.completed} questions with ${log.correct} correct answers (${accuracy}% accuracy) at ${time}
+      </div>`,
+
+      this.formatSection(
+        'Daily Progress',
+        `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+          <div style="padding: 10px; background-color: #faf5ff; border-radius: 4px;">
+            <strong style="color: #9333ea;">${userNames.user1}</strong>
+            <div style="margin-top: 5px;">${totals.user1} questions</div>
+          </div>
+          <div style="padding: 10px; background-color: #eff6ff; border-radius: 4px;">
+            <strong style="color: #3b82f6;">${userNames.user2}</strong>
+            <div style="margin-top: 5px;">${totals.user2} questions</div>
+          </div>
+        </div>
+        `
+      ),
+      this.formatSection(
+        'Current Leader',
+        `${leader} is leading by ${difference} questions`
+      )
+    ];
+
+    return sections.join('');
+  }
+
+  async sendEmail(message: string, logId: number): Promise<void> {
+    // Check if notification was already sent (across all tabs/devices)
+    if (this.lastSentLogIds.has(logId) || this.processingLogs.has(logId)) {
       return;
     }
 
-    // Check if this log is currently being processed
-    if (this.processingLogs.has(logId)) {
-      return;
+    // Add a lock mechanism using localStorage
+    const lockKey = `email_lock_${logId}`;
+    const lockValue = Date.now().toString();
+    
+    // Try to acquire lock
+    if (localStorage.getItem(lockKey)) {
+      return; // Another tab/device is processing this notification
     }
-
+    
     try {
+      // Set lock with 30-second expiration
+      localStorage.setItem(lockKey, lockValue);
+      
       this.processingLogs.add(logId);
       let successCount = 0;
 
-      for (const phoneNumber of this.phoneNumbers) {
+      for (const recipientEmail of this.RECIPIENT_EMAILS) {
         try {
-          const response = await this.rateLimitedFetch(
-            `https://api.twilio.com/2010-04-01/Accounts/${this.accountSid}/Messages.json`,
-            {
-              method: 'POST',
-              headers: {
-                'Authorization': 'Basic ' + btoa(`${this.accountSid}:${this.authToken}`),
-                'Content-Type': 'application/x-www-form-urlencoded',
-              },
-              body: new URLSearchParams({
-                'Body': message,
-                'MessagingServiceSid': this.messagingServiceSid,
-                'To': phoneNumber
-              })
-            }
-          );
-
-          const data = await response.json();
-
-          if (response.status === 429) {
-            // If we get a rate limit error but the message was actually sent
-            // (check data.sid or other Twilio-specific indicators)
-            if (data.sid) {
-              successCount++;
-              console.log(`Message sent successfully despite rate limit to ${phoneNumber}`);
-              continue;
-            }
-            // If we need to retry, we could add retry logic here
-          }
-
-          if (!response.ok && response.status !== 429) {
-            throw new Error(`Failed to send SMS to ${phoneNumber}: ${JSON.stringify(data)}`);
-          }
+          await this.rateLimitedSend({
+            to_email: recipientEmail,
+            message_html: message,
+            subject: 'Qbank Challenge Activity update',
+          });
 
           successCount++;
+          console.log(`Email sent successfully to ${recipientEmail}`);
 
         } catch (error) {
-          // Only log error if it's not a rate limit error
-          if (error instanceof Error && !error.message.includes('429')) {
-            console.error(`Failed to send SMS to ${phoneNumber}:`, error);
-          }
+          console.error(`Failed to send email to ${recipientEmail}:`, error);
         }
       }
 
-      // If at least one message was sent successfully, mark the log as processed
       if (successCount > 0) {
-        this.lastSentLogIds.add(logId);
+        // Save to localStorage to prevent duplicate sends across tabs/devices
+        this.saveSentNotification(logId);
       }
 
     } finally {
       this.processingLogs.delete(logId);
+      // Only remove lock if we created it
+      if (localStorage.getItem(lockKey) === lockValue) {
+        localStorage.removeItem(lockKey);
+      }
     }
   }
 
-  formatActivityMessage(log: ActivityLog, userNames: { user1: string; user2: string }, totals: { user1: number; user2: number }): string {
-    const userName = userNames[log.user_type];
-    const accuracy = calculateAccuracy(log.correct, log.completed);
-    const time = new Date(log.timestamp).toLocaleTimeString('en-IN', { hour12: false });
-    
-    let message = `New Activity: ${userName} completed ${log.completed} questions with ${log.correct} correct (${accuracy}%) at ${time}`;
-    
-    const leader = totals.user1 > totals.user2 ? userNames.user1 : userNames.user2;
-    const leaderQuestions = Math.max(totals.user1, totals.user2);
-    const difference = Math.abs(totals.user1 - totals.user2);
-    
-    message += `\nQuestions completed today: ${userNames.user1}: ${totals.user1}, ${userNames.user2}: ${totals.user2}`;
-    message += `\nLeader: ${leader} by ${difference} questions`;
-
-    return message;
+  // Cleanup method to call when component unmounts
+  cleanup() {
+    window.removeEventListener('storage', this.handleStorageChange);
   }
 }
 
@@ -215,8 +271,8 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
   const [lastRefreshAttempt, setLastRefreshAttempt] = useState<number>(Date.now());
   const MINIMUM_REFRESH_INTERVAL = 5000; // 5 seconds minimum between refreshes
   const [notificationSystem, setNotificationSystem] = useState<any>(null);
-  const [smsService] = useState(() => new SMSNotificationService());
-  const [smsError, setSmsError] = useState<string | null>(null);
+  const [emailService] = useState(() => new EmailNotificationService());
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   /**
    * Enhanced auto-refresh mechanism with error handling and rate limiting
@@ -428,19 +484,19 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
       }
 
       // Always try to send SMS since it's enabled by default
-      const message = smsService.formatActivityMessage(log, userNames, {
+      const message = emailService.formatActivityMessage(log, userNames, {
         user1: dailyTotals.user1.completed,
         user2: dailyTotals.user2.completed
       });
-      await smsService.sendSMS(message, log.id);
+      await emailService.sendEmail(message, log.id);
     } catch (error) {
       console.error('Notification error:', error);
-      setSmsError('Failed to send SMS notification');
+      setEmailError('Failed to send SMS notification');
       
       // Clear error after 5 seconds
-      setTimeout(() => setSmsError(null), 5000);
+      setTimeout(() => setEmailError(null), 5000);
     }
-  }, [notifications.enabled, userNames, notificationSystem, smsService, dailyTotals]);
+  }, [notifications.enabled, userNames, notificationSystem, emailService, dailyTotals]);
 
   /**
    * Watches for new logs and triggers notifications
@@ -539,9 +595,9 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
             </Button>
           </div>
         </div>
-        {(refreshError || smsError) && (
+        {(refreshError || emailError) && (
           <div className="mt-2 text-sm text-red-500 dark:text-red-400">
-            {refreshError || smsError}
+            {refreshError || emailError}
           </div>
         )}
       </CardHeader>
