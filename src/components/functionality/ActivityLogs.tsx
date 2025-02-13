@@ -124,7 +124,7 @@ export class EmailNotificationService {
   formatActivityMessage(
     log: ActivityLog, 
     userNames: { user1: string; user2: string }, 
-    totals: { user1: number; user2: number }
+    todaysTotals: { user1: number; user2: number }
   ): string {
     const userName = userNames[log.user_type];
     const accuracy = calculateAccuracy(log.correct, log.completed);
@@ -134,31 +134,31 @@ export class EmailNotificationService {
       hour12: false 
     });
 
-    const leader = totals.user1 > totals.user2 ? userNames.user1 : userNames.user2;
-    const difference = Math.abs(totals.user1 - totals.user2);
+    const leader = todaysTotals.user1 > todaysTotals.user2 ? userNames.user1 : userNames.user2;
+    const difference = Math.abs(todaysTotals.user1 - todaysTotals.user2);
 
     const sections = [
       `<div style="margin-bottom: 15px; color: #374151;">
         ${userName} completed ${log.completed} questions with ${log.correct} correct answers (${accuracy}% accuracy) at ${time}
       </div>`,
       this.formatSection(
-        'Daily Progress',
+        'Today\'s Progress',
         `
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
           <div style="padding: 10px; background-color: #faf5ff; border-radius: 4px;">
             <strong style="color: #9333ea;">${userNames.user1}</strong>
-            <div style="margin-top: 5px;">${totals.user1} questions</div>
+            <div style="margin-top: 5px;">${todaysTotals.user1} questions</div>
           </div>
           <div style="padding: 10px; background-color: #eff6ff; border-radius: 4px;">
             <strong style="color: #3b82f6;">${userNames.user2}</strong>
-            <div style="margin-top: 5px;">${totals.user2} questions</div>
+            <div style="margin-top: 5px;">${todaysTotals.user2} questions</div>
           </div>
         </div>
         `
       ),
       this.formatSection(
-        'Current Leader',
-        `${leader} is leading by ${difference} questions`
+        'Today\'s Leader',
+        `${leader} is leading today by ${difference} questions`
       )
     ];
 
