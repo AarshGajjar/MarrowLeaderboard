@@ -23,13 +23,6 @@ interface UserStats {
   name: string;
 }
 
-interface UserProgress {
-  date: string;
-  completed: number;
-  correct: number;
-  accuracy: number;
-}
-
 interface Stats {
   user1: UserStats;
   user2: UserStats;
@@ -102,6 +95,21 @@ const StatsComparison: React.FC<{
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const getCurrentDate = () => {
+    const now = new Date();
+    return now.toISOString().split('T')[0];
+  };
+
+  const getTodaysTotals = () => {
+    const today = getCurrentDate();
+    return dailyData
+      .filter(data => data.date === today)
+      .reduce((acc, data) => ({
+        user1: (data.user1Completed || 0),
+        user2: (data.user2Completed || 0)
+      }), { user1: 0, user2: 0 });
+  };
+
   const handleSubmit = async () => {
     if (isSubmitting) return;
   
@@ -123,7 +131,7 @@ const StatsComparison: React.FC<{
       
       // Create log object for notification
       const newLog = {
-        id: Date.now(), // Use timestamp as temporary ID
+        id: Date.now(),
         user_type: activeUser,
         completed,
         correct,
@@ -131,27 +139,20 @@ const StatsComparison: React.FC<{
         created_at: new Date().toISOString()
       };
   
-      // Calculate updated totals for the notification
-      const updatedTotals = {
-        user1: activeUser === 'user1' 
-          ? stats.user1.completed + completed 
-          : stats.user1.completed,
-        user2: activeUser === 'user2' 
-          ? stats.user2.completed + completed 
-          : stats.user2.completed
-      };
+      // Get current day's totals including the new submission
+      const todaysTotals = getTodaysTotals();
+      todaysTotals[activeUser] += completed; // Add the new submission to today's total
   
       // Send notification
       try {
         const message = emailService.formatActivityMessage(newLog, {
           user1: stats.user1.name,
           user2: stats.user2.name
-        }, updatedTotals);
+        }, todaysTotals);
         
         await emailService.sendEmail(message);
       } catch (error) {
         console.error('Failed to send notification:', error);
-        // Don't block the progress update if notification fails
         toast.error('Progress updated but notification failed to send');
       }
   
