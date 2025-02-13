@@ -2,6 +2,38 @@ import React, { useMemo, useState } from 'react';
 import { Card, CardTitle, CardHeader, CardContent } from '@/components/ui/card';
 import { Crown, Rocket } from 'lucide-react';
 
+const StyleSheet = () => (
+  <style>
+    {`
+      @keyframes move-stripe {
+        0% {
+          transform: translateX(100%) rotate(45deg);
+        }
+        100% {
+          transform: translateX(-100%) rotate(45deg);
+        }
+      }
+
+      @keyframes bounce-subtle {
+        0%, 100% {
+          transform: translateY(0) translateX(-50%);
+        }
+        50% {
+          transform: translateY(-8px) translateX(-50%);
+        }
+      }
+
+      .animate-move-stripes {
+        animation: move-stripe 20s linear infinite;
+      }
+
+      .animate-bounce-subtle {
+        animation: bounce-subtle 3s infinite;
+      }
+    `}
+  </style>
+);
+
 interface DualUserProgressProps {
   user1: {
     previous?: number;
@@ -164,6 +196,182 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1: rawUser1, us
     return `${leader.name} leads at ${leaderProgress}%${leaderExtra}, with ${follower.name} at ${followerProgress}%${followerExtra}! Every step forward is a victory! 🌟 Keep pushing! 💫`;
   };
   
+  const MovingBackground = () => (
+    <div className="absolute inset-0 overflow-hidden">
+      {/* Day/Night Sky Base */}
+      <div className="absolute inset-0 bg-gradient-to-b from-sky-300 to-sky-100 dark:from-slate-900 dark:to-slate-800 transition-colors duration-1000" />
+  
+      {/* Sun/Moon */}
+      <div className="absolute right-[40%] top-[5%] transition-opacity duration-1000">
+        {/* Sun - visible in light mode */}
+        <div className="w-16 h-16 rounded-full bg-yellow-300 block dark:hidden 
+             shadow-[0_0_50px_rgba(250,204,21,0.4)] 
+             animate-pulse-slow" />
+        
+        {/* Moon - visible in dark mode */}
+        <div className="w-12 h-12 rounded-full bg-slate-200 hidden dark:block 
+             shadow-[0_0_30px_rgba(226,232,240,0.3)]
+             relative">
+        </div>
+      </div>
+  
+      {/* Clouds - Light Mode */}
+      <div className="absolute inset-0 dark:hidden">
+        <div className="absolute w-full h-40 animate-move-clouds-1">
+          <div className="absolute top-10 left-[10%] w-24 h-10 bg-white rounded-full opacity-80" />
+          <div className="absolute top-5 left-[20%] w-32 h-12 bg-white rounded-full opacity-90" />
+          <div className="absolute top-15 left-[45%] w-28 h-10 bg-white rounded-full opacity-85" />
+          <div className="absolute top-8 left-[70%] w-36 h-12 bg-white rounded-full opacity-90" />
+        </div>
+        <div className="absolute w-full h-40 animate-move-clouds-2">
+          <div className="absolute top-20 left-[5%] w-28 h-10 bg-white rounded-full opacity-75" />
+          <div className="absolute top-25 left-[30%] w-32 h-12 bg-white rounded-full opacity-85" />
+          <div className="absolute top-15 left-[60%] w-24 h-10 bg-white rounded-full opacity-80" />
+          <div className="absolute top-28 left-[85%] w-36 h-12 bg-white rounded-full opacity-85" />
+        </div>
+      </div>
+  
+      {/* Stars - Dark Mode */}
+      <div className="absolute inset-0 hidden dark:block">
+        <div className="absolute w-full h-full animate-move-stars-1">
+          {Array.from({ length: 50 }).map((_, i) => (
+            <div
+              key={`star1-${i}`}
+              className="absolute w-1 h-1 bg-white rounded-full animate-twinkle"
+              style={{
+                top: `${Math.random() * 60}%`,
+                left: `${Math.random() * 100}%`,
+                opacity: Math.random() * 0.8 + 0.2,
+                animationDelay: `${Math.random() * 3}s`,
+              }}
+            />
+          ))}
+        </div>
+        <div className="absolute w-full h-full animate-move-stars-2">
+          {Array.from({ length: 50 }).map((_, i) => (
+            <div
+              key={`star2-${i}`}
+              className="absolute w-1 h-1 bg-white rounded-full animate-twinkle"
+              style={{
+                top: `${Math.random() * 60}%`,
+                left: `${Math.random() * 100}%`,
+                opacity: Math.random() * 0.8 + 0.2,
+                animationDelay: `${Math.random() * 3}s`,
+              }}
+            />
+          ))}
+        </div>
+      </div>
+  
+      {/* Rolling Hills - Both Modes */}
+      <div className="absolute bottom-0 w-[200%] h-48">
+        {/* First Set of Hills */}
+        <div className="absolute bottom-0 w-full h-full animate-move-hills-1">
+          <div className="absolute bottom-0 w-full h-32 bg-gradient-to-b from-green-300 to-green-400 dark:from-purple-700 dark:to-purple-800"
+               style={{
+                 borderRadius: '50% 50% 0 0 / 100% 100% 0 0',
+                 transform: 'scaleX(2) translateX(-25%)',
+               }} />
+          <div className="absolute bottom-0 w-full h-24 bg-gradient-to-b from-green-400 to-green-500 dark:from-purple-600 dark:to-purple-700"
+               style={{
+                 borderRadius: '40% 60% 0 0 / 100% 100% 0 0',
+                 transform: 'scaleX(2) translateX(-15%)',
+               }} />
+        </div>
+        
+        {/* Second Set of Hills (for seamless loop) */}
+        <div className="absolute bottom-0 w-full h-full translate-x-full animate-move-hills-2">
+          <div className="absolute bottom-0 w-full h-32 bg-gradient-to-b from-green-300 to-green-400 dark:from-cyan-800 dark:to-purple-800"
+               style={{
+                 borderRadius: '50% 50% 0 0 / 100% 100% 0 0',
+                 transform: 'scaleX(2) translateX(-25%)',
+               }} />
+          <div className="absolute bottom-0 w-full h-24 bg-gradient-to-b from-green-400 to-green-500 dark:from-cyan-600 dark:to-slate-900"
+               style={{
+                 borderRadius: '40% 60% 0 0 / 100% 100% 0 0',
+                 transform: 'scaleX(2) translateX(-15%)',
+               }} />
+        </div>
+      </div>
+  
+      <style>
+        {`
+          @keyframes pulse-slow {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.9; }
+          }
+  
+          @keyframes move-clouds-1 {
+            0% { transform: translateX(0%); }
+            100% { transform: translateX(100%); }
+          }
+  
+          @keyframes move-clouds-2 {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(0%); }
+          }
+  
+          @keyframes move-stars-1 {
+            0% { transform: translateX(0%); }
+            100% { transform: translateX(100%); }
+          }
+  
+          @keyframes move-stars-2 {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(0%); }
+          }
+  
+          @keyframes move-hills-1 {
+            0% { transform: translateX(0%); }
+            100% { transform: translateX(-100%); }
+          }
+  
+          @keyframes move-hills-2 {
+            0% { transform: translateX(0%); }
+            100% { transform: translateX(-100%); }
+          }
+  
+          .animate-pulse-slow {
+            animation: pulse-slow 4s ease-in-out infinite;
+          }
+  
+          .animate-move-clouds-1 {
+            animation: move-clouds-1 60s linear infinite;
+          }
+  
+          .animate-move-clouds-2 {
+            animation: move-clouds-2 60s linear infinite;
+          }
+  
+          .animate-move-stars-1 {
+            animation: move-stars-1 80s linear infinite;
+          }
+  
+          .animate-move-stars-2 {
+            animation: move-stars-2 80s linear infinite;
+          }
+  
+          .animate-move-hills-1 {
+            animation: move-hills-1 40s linear infinite;
+          }
+  
+          .animate-move-hills-2 {
+            animation: move-hills-2 40s linear infinite;
+          }
+  
+          @keyframes twinkle {
+            0%, 100% { opacity: 0.2; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+          }
+  
+          .animate-twinkle {
+            animation: twinkle 3s ease-in-out infinite;
+          }
+        `}
+      </style>
+    </div>
+  );
+  
 
   interface UserIndicatorProps {
     name: string;
@@ -185,7 +393,9 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1: rawUser1, us
     isTargetReached, 
     questionsLeft,
     extraProgress,
-    isLeading  }: UserIndicatorProps) => {
+    isLeading,
+    isFirstUser
+  }: UserIndicatorProps) => {
     const displayPosition = Math.min(Math.max(position, 0), 100);
     
     const baseClassName = "absolute flex flex-col items-center transition-transform duration-300 ease-in-out";
@@ -198,13 +408,14 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1: rawUser1, us
         style={{ 
           left: `${displayPosition}%`, 
           top: '-4rem',
-          transform: 'translateX(-50%)'
+          transform: 'translateX(-50%)',
+          animation: `bounce-subtle 3s infinite ${isFirstUser ? '0s' : '1.5s'}`
         }}
         onMouseEnter={() => setHoveredUser(name)}
         onMouseLeave={() => setHoveredUser(null)}
       >
         <div className="relative will-change-transform">
-          <div className="w-20 h-20 rounded-full bg-card shadow-lg flex flex-col items-center justify-center p-2 border border-border transition-transform duration-300 ease-in-out hover:shadow-xl hover:border-border/80 -translate-y-4">
+          <div className="w-20 h-20 rounded-full bg-card shadow-lg flex flex-col items-center justify-center p-2 border border-border transition-all duration-300 ease-in-out hover:shadow-xl hover:border-border/80 -translate-y-4 hover:scale-105">
             <div className="w-full flex justify-center items-center gap-1">
               <p className="font-semibold text-xs whitespace-nowrap text-foreground">{name}</p>
               {isLeading && (
@@ -233,104 +444,105 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1: rawUser1, us
   };
 
   return (
-    <Card className="w-full shadow-lg rounded-lg overflow-hidden bg-gradient-to-br from-white/80 via-white/90 to-white/80 dark:from-slate-900/80 dark:via-slate-900/90 dark:to-slate-900/80 backdrop-blur-sm border border-white/20 dark:border-slate-800/20">
-      <CardHeader className="border-b p-4 bg-gradient-to-r from-purple-600/10 to-blue-600/10 dark:from-purple-900/20 dark:to-blue-900/20">
-      <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-        <Rocket className="w-5 h-5 text-amber-500" />
-        <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-          Today's Sprint
-        </span>
-      </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-2 pb-4 px-6 relative">
-      <p className="text-m text-center mb-2 pb-5 text-foreground font-semibold 
-        bg-gradient-to-r from-slate-50/80 via-slate-100/80 to-slate-50/80 
-        dark:from-slate-800/80 dark:via-slate-900/80 dark:to-slate-800/80 
-        backdrop-blur-sm py-3 px-6 rounded-lg 
-        shadow-[0_4px_14px_0_rgba(0,0,0,0.1)] 
-        dark:shadow-[0_4px_14px_0_rgba(255,255,255,0.1)]
-        transform transition-all duration-300 hover:scale-[1.02] 
-        border border-slate-200/50 dark:border-slate-700/50
-        animate-fade-in">
-        {getMotivationalMessage()}
-      </p>
-      <div className="relative mt-16 mx-[6%]">
-        <div className="h-3 w-full rounded-full bg-muted overflow-hidden shadow-inner dark:bg-slate-800">
-        {[user1Stats, user2Stats].map((stats, index) => {
-          const user = index === 0 ? user1 : user2;
-          const gradientColors = user === user1
-            ? 'from-purple-400 to-purple-600 dark:from-purple-400 dark:to-purple-600'
-            : 'from-blue-400 to-blue-600 dark:from-blue-400 dark:to-blue-600';
-          
-          const relativeWidth = (user.current / maxProgress) * 100;
-          const isLeading = user.current >= (index === 0 ? user2.current : user1.current);
-          
-          const barClassName = `absolute h-full transition-all duration-1000 ease-in-out bg-gradient-to-r ${gradientColors} ${
-            hoveredUser === user.name ? 'z-20' : 
-            hoveredUser === null && isLeading ? 'z-10' : 'z-0'
-          }`;
-
-          return (
-            <div key={user.name} 
-              className={barClassName}
-              style={{ width: `${relativeWidth}%` }}
-            >
-              <div 
-                className="absolute right-0 top-1/2 w-4 h-4 rounded-full will-change-transform"
-                style={{
-                  background: user === user1
-                    ? 'radial-gradient(circle at center, #a855f7, #9333ea)'
-                    : 'radial-gradient(circle at center, #60a5fa, #3b82f6)',
-                  transform: 'translate(50%, -50%)',
-                  boxShadow: user === user1
-                    ? '0 0 10px rgba(168, 85, 247, 0.5)' 
-                    : '0 0 10px rgba(96, 165, 250, 0.5)',
-                }}
-              />
+    <>
+      <StyleSheet />
+      <Card className="w-full shadow-lg rounded-lg overflow-hidden bg-gradient-to-br from-white/80 via-white/90 to-white/80 dark:from-slate-900/80 dark:via-slate-900/90 dark:to-slate-900/80 backdrop-blur-sm border border-white/20 dark:border-slate-800/20 relative">
+        <MovingBackground />
+        <CardHeader className="border-b p-4 bg-gradient-to-r from-purple-600/10 to-blue-600/10 dark:from-purple-900/20 dark:to-blue-900/20">
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+            <Rocket className="w-5 h-5 text-amber-500" />
+            <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              Today's Sprint
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-2 pb-4 px-6 relative">
+          <p className="text-m text-center mb-2 pb-5 text-foreground font-semibold 
+            bg-gradient-to-r from-slate-50/80 via-slate-100/80 to-slate-50/80 
+            dark:from-slate-800/80 dark:via-slate-900/80 dark:to-slate-800/80 
+            backdrop-blur-sm py-3 px-6 rounded-lg 
+            shadow-[0_4px_14px_0_rgba(0,0,0,0.1)] 
+            dark:shadow-[0_4px_14px_0_rgba(255,255,255,0.1)]
+            transform transition-all duration-300 hover:scale-[1.02] 
+            border border-slate-200/50 dark:border-slate-700/50">
+            {getMotivationalMessage()}
+          </p>
+          <div className="relative mt-16 mx-[6%]">
+            <div className="h-3 w-full rounded-full bg-muted overflow-hidden shadow-inner dark:bg-slate-800">
+              {[user1Stats, user2Stats].map((stats, index) => {
+                const user = index === 0 ? user1 : user2;
+                const gradientColors = user === user1
+                  ? 'from-purple-400 to-purple-600 dark:from-purple-400 dark:to-purple-600'
+                  : 'from-blue-400 to-blue-600 dark:from-blue-400 dark:to-blue-600';
+                
+                const relativeWidth = (user.current / maxProgress) * 100;
+                const isLeading = user.current >= (index === 0 ? user2.current : user1.current);
+                
+                return (
+                  <div key={user.name} 
+                    className={`absolute h-full transition-all duration-1000 ease-in-out bg-gradient-to-r ${gradientColors} ${
+                      hoveredUser === user.name ? 'z-20' : 
+                      hoveredUser === null && isLeading ? 'z-10' : 'z-0'
+                    }`}
+                    style={{ width: `${relativeWidth}%` }}
+                  >
+                    <div 
+                      className="absolute right-0 top-1/2 w-4 h-4 rounded-full will-change-transform"
+                      style={{
+                        background: user === user1
+                          ? 'radial-gradient(circle at center, #a855f7, #9333ea)'
+                          : 'radial-gradient(circle at center, #60a5fa, #3b82f6)',
+                        transform: 'translate(50%, -50%)',
+                        boxShadow: user === user1
+                          ? '0 0 10px rgba(168, 85, 247, 0.5)' 
+                          : '0 0 10px rgba(96, 165, 250, 0.5)',
+                      }}
+                    />
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
-        </div>
 
-        <UserIndicator 
-        {...user1}
-        position={user1Stats.visualPosition}
-        isTargetReached={user1Stats.isTargetReached}
-        questionsLeft={user1Stats.questionsLeft}
-        extraProgress={user1Stats.extraProgress}
-        isLeading={user1.current > user2.current}
-        isFirstUser={true}
-        />
-        <UserIndicator 
-        {...user2}
-        position={user2Stats.visualPosition}
-        isTargetReached={user2Stats.isTargetReached}
-        questionsLeft={user2Stats.questionsLeft}
-        extraProgress={user2Stats.extraProgress}
-        isLeading={user2.current > user1.current}
-        isFirstUser={false}
-        />
-      </div>
-      <div className="mt-4 text-center text-sm text-muted-foreground">
+            <UserIndicator 
+              {...user1}
+              position={user1Stats.visualPosition}
+              isTargetReached={user1Stats.isTargetReached}
+              questionsLeft={user1Stats.questionsLeft}
+              extraProgress={user1Stats.extraProgress}
+              isLeading={user1.current > user2.current}
+              isFirstUser={true}
+            />
+            <UserIndicator 
+              {...user2}
+              position={user2Stats.visualPosition}
+              isTargetReached={user2Stats.isTargetReached}
+              questionsLeft={user2Stats.questionsLeft}
+              extraProgress={user2Stats.extraProgress}
+              isLeading={user2.current > user1.current}
+              isFirstUser={false}
+            />
+          </div>
+          <div className="mt-4 text-center text-sm text-muted-foreground">
             {(() => {
-            if (user1.current === user2.current) {
-              return null;
-            }
-            const leaderInfo = user1.current > user2.current 
-              ? { name: user1.name, color: user1.color, questions: user1.current }
-              : { name: user2.name, color: user2.color, questions: user2.current };
-            return (
-              <>
-              <span className="font-medium" style={{ color: leaderInfo.color }}>
-                {leaderInfo.name}
-              </span>
-              <span> is leading with {Math.abs(user1.current - user2.current)} questions today!</span>
-              </>
-            );
+              if (user1.current === user2.current) {
+                return null;
+              }
+              const leaderInfo = user1.current > user2.current 
+                ? { name: user1.name, color: user1.color, questions: user1.current }
+                : { name: user2.name, color: user2.color, questions: user2.current };
+              return (
+                <>
+                  <span className="font-medium" style={{ color: leaderInfo.color }}>
+                    {leaderInfo.name}
+                  </span>
+                  <span> is leading with {Math.abs(user1.current - user2.current)} questions today!</span>
+                </>
+              );
             })()}
-        </div>
-      </CardContent>
-    </Card>
+          </div>
+        </CardContent>
+      </Card>
+    </>
   );
 };
 
