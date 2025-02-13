@@ -13,6 +13,7 @@ import {
   calculateConsistencyAndStreak 
 } from '@/utils/dataPreprocessing';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {EmailNotificationService} from './ActivityLogs';
 
 type UserKey = 'user1' | 'user2';
 
@@ -49,7 +50,7 @@ const StatsComparison: React.FC<{
   const [showProgress, setShowProgress] = useState(false);
   const [selectedProgressUser, setSelectedProgressUser] = useState<UserKey>('user1');
   const [isRadarChartOpen, setIsRadarChartOpen] = useState(false);
-
+  const [emailService] = useState(() => new EmailNotificationService());
   const user1Metrics = calculateMetrics(stats.user1);
   const user2Metrics = calculateMetrics(stats.user2);
   const leader: UserKey = user1Metrics.points > user2Metrics.points ? 'user1' : 'user2';
@@ -103,7 +104,7 @@ const StatsComparison: React.FC<{
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
-
+  
     const completed = parseInt(inputs.completed);
     const correct = parseInt(inputs.correct);
     
@@ -112,11 +113,48 @@ const StatsComparison: React.FC<{
       toast.error('Invalid input');
       return;
     }
-
+  
     try {
       setIsSubmitting(true);
       setError('');
+      
+      // Update progress
       await onUpdateProgress(activeUser, completed, correct);
+      
+      // Create log object for notification
+      const newLog = {
+        id: Date.now(), // Use timestamp as temporary ID
+        user_type: activeUser,
+        completed,
+        correct,
+        timestamp: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      };
+  
+      // Calculate updated totals for the notification
+      const updatedTotals = {
+        user1: activeUser === 'user1' 
+          ? stats.user1.completed + completed 
+          : stats.user1.completed,
+        user2: activeUser === 'user2' 
+          ? stats.user2.completed + completed 
+          : stats.user2.completed
+      };
+  
+      // Send notification
+      try {
+        const message = emailService.formatActivityMessage(newLog, {
+          user1: stats.user1.name,
+          user2: stats.user2.name
+        }, updatedTotals);
+        
+        await emailService.sendEmail(message);
+      } catch (error) {
+        console.error('Failed to send notification:', error);
+        // Don't block the progress update if notification fails
+        toast.error('Progress updated but notification failed to send');
+      }
+  
       toast.success(`${completed} questions added for ${stats[activeUser].name}`);
       
       setInputs({ completed: '', correct: '' });

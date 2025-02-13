@@ -87,9 +87,7 @@ const getCurrentDate = () => {
 };
 
 // Email Notifications
-class EmailNotificationService {
-  private lastSentLogIds: Set<number> = new Set();
-  private processingLogs: Set<number> = new Set();
+export class EmailNotificationService {
   private lastMessageTime: number = 0;
   private minDelayBetweenMessages: number = 1000;
 
@@ -100,31 +98,6 @@ class EmailNotificationService {
 
   constructor() {
     emailjs.init(this.EMAIL_PUBLIC_KEY);
-    // Try to load previously sent notifications from localStorage
-    this.loadSentNotifications();
-    // Set up storage event listener for cross-tab communication
-    window.addEventListener('storage', this.handleStorageChange);
-  }
-
-  private handleStorageChange = (event: StorageEvent) => {
-    if (event.key === 'lastSentNotifications') {
-      this.loadSentNotifications();
-    }
-  };
-
-  private loadSentNotifications() {
-    const saved = localStorage.getItem('lastSentNotifications');
-    if (saved) {
-      const savedIds = JSON.parse(saved);
-      this.lastSentLogIds = new Set(savedIds);
-    }
-  }
-
-  private saveSentNotification(logId: number) {
-    this.lastSentLogIds.add(logId);
-    localStorage.setItem('lastSentNotifications', 
-      JSON.stringify(Array.from(this.lastSentLogIds))
-    );
   }
 
   private async rateLimitedSend(emailData: any): Promise<void> {
@@ -165,11 +138,9 @@ class EmailNotificationService {
     const difference = Math.abs(totals.user1 - totals.user2);
 
     const sections = [
-      // Main activity message without redundant heading
       `<div style="margin-bottom: 15px; color: #374151;">
         ${userName} completed ${log.completed} questions with ${log.correct} correct answers (${accuracy}% accuracy) at ${time}
       </div>`,
-
       this.formatSection(
         'Daily Progress',
         `
@@ -194,61 +165,27 @@ class EmailNotificationService {
     return sections.join('');
   }
 
-  async sendEmail(message: string, logId: number): Promise<void> {
-    // Check if notification was already sent (across all tabs/devices)
-    if (this.lastSentLogIds.has(logId) || this.processingLogs.has(logId)) {
-      return;
-    }
+  async sendEmail(message: string): Promise<void> {
+    let successCount = 0;
 
-    // Add a lock mechanism using localStorage
-    const lockKey = `email_lock_${logId}`;
-    const lockValue = Date.now().toString();
-    
-    // Try to acquire lock
-    if (localStorage.getItem(lockKey)) {
-      return; // Another tab/device is processing this notification
-    }
-    
-    try {
-      // Set lock with 30-second expiration
-      localStorage.setItem(lockKey, lockValue);
-      
-      this.processingLogs.add(logId);
-      let successCount = 0;
+    for (const recipientEmail of this.RECIPIENT_EMAILS) {
+      try {
+        await this.rateLimitedSend({
+          to_email: recipientEmail,
+          message_html: message,
+          subject: 'Qbank Challenge Activity update',
+        });
 
-      for (const recipientEmail of this.RECIPIENT_EMAILS) {
-        try {
-          await this.rateLimitedSend({
-            to_email: recipientEmail,
-            message_html: message,
-            subject: 'Qbank Challenge Activity update',
-          });
-
-          successCount++;
-          console.log(`Email sent successfully to ${recipientEmail}`);
-
-        } catch (error) {
-          console.error(`Failed to send email to ${recipientEmail}:`, error);
-        }
-      }
-
-      if (successCount > 0) {
-        // Save to localStorage to prevent duplicate sends across tabs/devices
-        this.saveSentNotification(logId);
-      }
-
-    } finally {
-      this.processingLogs.delete(logId);
-      // Only remove lock if we created it
-      if (localStorage.getItem(lockKey) === lockValue) {
-        localStorage.removeItem(lockKey);
+        successCount++;
+        console.log(`Email sent successfully to ${recipientEmail}`);
+      } catch (error) {
+        console.error(`Failed to send email to ${recipientEmail}:`, error);
       }
     }
-  }
 
-  // Cleanup method to call when component unmounts
-  cleanup() {
-    window.removeEventListener('storage', this.handleStorageChange);
+    if (successCount === 0) {
+      throw new Error('Failed to send email to any recipient');
+    }
   }
 }
 
@@ -483,12 +420,6 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
         );
       }
 
-      // Always try to send SMS since it's enabled by default
-      const message = emailService.formatActivityMessage(log, userNames, {
-        user1: dailyTotals.user1.completed,
-        user2: dailyTotals.user2.completed
-      });
-      await emailService.sendEmail(message, log.id);
     } catch (error) {
       console.error('Notification error:', error);
       setEmailError('Failed to send SMS notification');
