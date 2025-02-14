@@ -164,152 +164,177 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1: rawUser1, us
     return `${leader.name} leads at ${leaderProgress}%${leaderExtra}, with ${follower.name} at ${followerProgress}%${followerExtra}! Every step forward is a victory! 🌟 Keep pushing! 💫`;
   };
   
-  const MovingBackground = () => (
-    <div className="absolute inset-0 overflow-hidden">
-      {/* Day/Night Sky Base */}
-      <div className="absolute inset-0 bg-gradient-to-b from-sky-300 to-sky-100 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300" />
+  const MovingBackground = () => {
+    const now = new Date();
+    const hours = now.getHours();
+    const isDaytime = hours >= 7 && hours < 19; // 7 AM to 7 PM
   
-      {/* Sun/Moon */}
-      <div className="absolute right-[30%] top-[5%] transition-opacity duration-300">
-        {/* Sun - visible in light mode */}
-        <div className="w-16 h-16 rounded-full bg-yellow-300 block dark:hidden 
-             shadow-[0_0_50px_rgba(250,204,21,0.4)] 
-             animate-pulse-slow" />
-        
-        {/* Moon - visible in dark mode */}
-        <div className="w-12 h-12 rounded-full bg-slate-200 hidden dark:block 
-             shadow-[0_0_30px_rgba(226,232,240,0.3)]
-             relative">
-        </div>
-      </div>
+    // Calculate sun/moon position based on time
+    const sunMoonPosition = () => {
+      // Determine start and end hours for the current cycle (day or night)
+      const startHour = isDaytime ? 7 : 19;
+      const endHour = isDaytime ? 19 : 7;
+      const totalHours = ((endHour - startHour + 24) % 24) || 12; // Ensure a 12-hour cycle if needed
+      const currentHour = (hours - startHour + 24) % 24;
+      const progress = currentHour / totalHours;
   
-      {/* Clouds - Light Mode */}
-      <div className="absolute inset-0 dark:hidden">
-        <div className="absolute w-full h-40 animate-move-clouds-1">
-          <div className="absolute top-10 left-[10%] w-24 h-10 bg-white rounded-full opacity-80" />
-          <div className="absolute top-5 left-[20%] w-32 h-12 bg-white rounded-full opacity-90" />
-          <div className="absolute top-15 left-[45%] w-28 h-10 bg-white rounded-full opacity-85" />
-          <div className="absolute top-8 left-[70%] w-36 h-12 bg-white rounded-full opacity-90" />
-        </div>
-        <div className="absolute w-full h-40 animate-move-clouds-2">
-          <div className="absolute top-20 left-[5%] w-28 h-10 bg-white rounded-full opacity-75" />
-          <div className="absolute top-25 left-[30%] w-32 h-12 bg-white rounded-full opacity-85" />
-          <div className="absolute top-15 left-[60%] w-24 h-10 bg-white rounded-full opacity-80" />
-          <div className="absolute top-28 left-[85%] w-36 h-12 bg-white rounded-full opacity-85" />
-        </div>
-      </div>
+      // Horizontal position moves linearly from 0% to 100%
+      const x = progress * 100;
   
-      {/* Stars - Dark Mode */}
-      <div className="absolute inset-0 hidden dark:block">
-        <div className="absolute w-full h-full animate-move-stars-1">
-          {Array.from({ length: 50 }).map((_, i) => (
+      // Vertical position follows an arc:
+      // At progress = 0 or 1, y = 50% (sun/moon near the horizon)
+      // At progress = 0.5, y = 5% (sun/moon at its highest point)
+      const y = 27.5 - 22.5 * Math.cos(2 * Math.PI * (progress - 0.5));
+  
+      return { x, y };
+    };
+  
+    const { x, y } = sunMoonPosition();
+  
+    return (
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Day/Night Sky Base */}
+        <div className="absolute inset-0 bg-gradient-to-b from-sky-300 to-sky-100 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300" />
+  
+        {/* Sun/Moon */}
+        <div
+          className="absolute transition-opacity duration-300"
+          style={{
+            left: `${x}%`,
+            top: `${y}%`,
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          {/* Sun - visible in light mode */}
+          <div
+            className="w-16 h-16 rounded-full bg-yellow-300 block dark:hidden shadow-[0_0_50px_rgba(250,204,21,0.4)] animate-pulse-slow"
+          />
+  
+          {/* Moon - visible in dark mode */}
+          <div
+            className="w-12 h-12 rounded-full bg-slate-200 hidden dark:block shadow-[0_0_30px_rgba(226,232,240,0.3)]"
+          />
+        </div>
+  
+        {/* Clouds - Light Mode */}
+        <div className="absolute inset-0 dark:hidden">
+          <div className="absolute w-full h-40 animate-move-clouds-1">
+            <div className="absolute top-10 left-[10%] w-24 h-10 bg-white rounded-full opacity-80" />
+            <div className="absolute top-5 left-[20%] w-32 h-12 bg-white rounded-full opacity-90" />
+            <div className="absolute top-15 left-[45%] w-28 h-10 bg-white rounded-full opacity-85" />
+            <div className="absolute top-8 left-[70%] w-36 h-12 bg-white rounded-full opacity-90" />
+          </div>
+          <div className="absolute w-full h-40 animate-move-clouds-2">
+            <div className="absolute top-20 left-[5%] w-28 h-10 bg-white rounded-full opacity-75" />
+            <div className="absolute top-25 left-[30%] w-32 h-12 bg-white rounded-full opacity-85" />
+            <div className="absolute top-15 left-[60%] w-24 h-10 bg-white rounded-full opacity-80" />
+            <div className="absolute top-28 left-[85%] w-36 h-12 bg-white rounded-full opacity-85" />
+          </div>
+        </div>
+  
+        {/* Stars - Dark Mode */}
+        <div className="absolute inset-0 hidden dark:block">
+          <div className="absolute w-full h-full animate-move-stars-1">
+            {Array.from({ length: 50 }).map((_, i) => (
+              <div
+                key={`star1-${i}`}
+                className="absolute w-1 h-1 bg-white rounded-full animate-twinkle"
+                style={{
+                  top: `${Math.random() * 60}%`,
+                  left: `${Math.random() * 100}%`,
+                  opacity: Math.random() * 0.8 + 0.2,
+                  animationDelay: `${Math.random() * 3}s`,
+                }}
+              />
+            ))}
+          </div>
+          <div className="absolute w-full h-full animate-move-stars-2">
+            {Array.from({ length: 50 }).map((_, i) => (
+              <div
+                key={`star2-${i}`}
+                className="absolute w-1 h-1 bg-white rounded-full animate-twinkle"
+                style={{
+                  top: `${Math.random() * 60}%`,
+                  left: `${Math.random() * 100}%`,
+                  opacity: Math.random() * 0.8 + 0.2,
+                  animationDelay: `${Math.random() * 3}s`,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+  
+        {/* Rolling Hills - Both Modes */}
+        <div className="absolute bottom-0 w-[200%] h-48">
+          {/* First Set of Hills */}
+          <div className="absolute bottom-0 w-full h-full animate-move-hills-1">
             <div
-              key={`star1-${i}`}
-              className="absolute w-1 h-1 bg-white rounded-full animate-twinkle"
+              className="absolute bottom-0 w-full h-32 bg-gradient-to-b from-green-300 to-green-400 dark:from-purple-700 dark:to-purple-800"
               style={{
-                top: `${Math.random() * 60}%`,
-                left: `${Math.random() * 100}%`,
-                opacity: Math.random() * 0.8 + 0.2,
-                animationDelay: `${Math.random() * 3}s`,
+                borderRadius: '50% 50% 0 0 / 100% 100% 0 0',
+                transform: 'scaleX(2) translateX(25%)',
               }}
             />
-          ))}
-        </div>
-        <div className="absolute w-full h-full animate-move-stars-2">
-          {Array.from({ length: 50 }).map((_, i) => (
             <div
-              key={`star2-${i}`}
-              className="absolute w-1 h-1 bg-white rounded-full animate-twinkle"
+              className="absolute bottom-0 w-full h-24 bg-gradient-to-b from-green-400 to-green-500 dark:from-purple-600 dark:to-purple-700"
               style={{
-                top: `${Math.random() * 60}%`,
-                left: `${Math.random() * 100}%`,
-                opacity: Math.random() * 0.8 + 0.2,
-                animationDelay: `${Math.random() * 3}s`,
+                borderRadius: '40% 60% 0 0 / 100% 100% 0 0',
+                transform: 'scaleX(2) translateX(15%)',
               }}
             />
-          ))}
+          </div>
+  
+          {/* Second Set of Hills (for seamless loop) */}
+          <div className="absolute bottom-0 w-full h-full translate-x-full animate-move-hills-2">
+            <div
+              className="absolute bottom-0 w-full h-32 bg-gradient-to-b from-green-300 to-green-400 dark:from-cyan-800 dark:to-purple-800"
+              style={{
+                borderRadius: '50% 50% 0 0 / 100% 100% 0 0',
+                transform: 'scaleX(2) translateX(-25%)',
+              }}
+            />
+            <div
+              className="absolute bottom-0 w-full h-24 bg-gradient-to-b from-green-400 to-green-500 dark:from-cyan-600 dark:to-slate-900"
+              style={{
+                borderRadius: '40% 60% 0 0 / 100% 100% 0 0',
+                transform: 'scaleX(2) translateX(-15%)',
+              }}
+            />
+          </div>
         </div>
-      </div>
   
-      {/* Rolling Hills - Both Modes */}
-      <div className="absolute bottom-0 w-[200%] h-48">
-        {/* First Set of Hills */}
-        <div className="absolute bottom-0 w-full h-full animate-move-hills-1">
-          <div className="absolute bottom-0 w-full h-32 bg-gradient-to-b from-green-300 to-green-400 dark:from-purple-700 dark:to-purple-800"
-               style={{
-                 borderRadius: '50% 50% 0 0 / 100% 100% 0 0',
-                 transform: 'scaleX(2) translateX(-25%)',
-               }} />
-          <div className="absolute bottom-0 w-full h-24 bg-gradient-to-b from-green-400 to-green-500 dark:from-purple-600 dark:to-purple-700"
-               style={{
-                 borderRadius: '40% 60% 0 0 / 100% 100% 0 0',
-                 transform: 'scaleX(2) translateX(-15%)',
-               }} />
-        </div>
-        
-        {/* Second Set of Hills (for seamless loop) */}
-        <div className="absolute bottom-0 w-full h-full translate-x-full animate-move-hills-2">
-          <div className="absolute bottom-0 w-full h-32 bg-gradient-to-b from-green-300 to-green-400 dark:from-cyan-800 dark:to-purple-800"
-               style={{
-                 borderRadius: '50% 50% 0 0 / 100% 100% 0 0',
-                 transform: 'scaleX(2) translateX(-25%)',
-               }} />
-          <div className="absolute bottom-0 w-full h-24 bg-gradient-to-b from-green-400 to-green-500 dark:from-cyan-600 dark:to-slate-900"
-               style={{
-                 borderRadius: '40% 60% 0 0 / 100% 100% 0 0',
-                 transform: 'scaleX(2) translateX(-15%)',
-               }} />
-        </div>
-      </div>
-  
-      <style>
-        {`
-          @keyframes pulse-slow {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.1); opacity: 0.9; }
-          }
-  
-          @keyframes move-clouds-1 {
-            0% { transform: translateX(0%); }
-            100% { transform: translateX(-100%); }
-          }
-  
-          @keyframes move-clouds-2 {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(0%); }
-          }
-  
-          @keyframes move-stars-1 {
-            0% { transform: translateX(0%); }
-            100% { transform: translateX(-100%); }
-          }
-  
-          @keyframes move-stars-2 {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(0%); }
-          }
-  
-          @keyframes move-hills-1 {
-            0% { transform: translateX(0%); }
-            100% { transform: translateX(-10%); }
-          }
-  
-          @keyframes move-hills-2 {
-            0% { transform: translateX(0%); }
-            100% { transform: translateX(-100%); }
-          }
-
-          @keyframes bounce-subtle {
-            0%, 100% {
-              transform: translateY(0) translateX(-50%);
+        <style>
+          {`
+            @keyframes move-clouds-1 {
+              0% { transform: translateX(0%); }
+              100% { transform: translateX(-100%); }
             }
-            50% {
-              transform: translateY(-8px) translateX(-50%);
+  
+            @keyframes move-clouds-2 {
+              0% { transform: translateX(100%); }
+              100% { transform: translateX(0%); }
             }
-          }
-
-
-          .animate-bounce-subtle {
+  
+            @keyframes move-stars-1 {
+              0% { transform: translateX(0%); }
+              100% { transform: translateX(-100%); }
+            }
+  
+            @keyframes move-stars-2 {
+              0% { transform: translateX(100%); }
+              100% { transform: translateX(0%); }
+            }
+  
+            @keyframes move-hills-1 {
+              0% { transform: translateX(0%); }
+              100% { transform: translateX(-50%); }
+            }
+  
+            @keyframes move-hills-2 {
+              0% { transform: translateX(0%); }
+              100% { transform: translateX(-50%); }
+            }
+            .animate-bounce-subtle {
             animation: bounce-subtle 3s infinite;
           }
   
@@ -349,10 +374,11 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1: rawUser1, us
           .animate-twinkle {
             animation: twinkle 3s ease-in-out infinite;
           }
-        `}
-      </style>
-    </div>
-  );
+          `}
+        </style>
+      </div>
+    );
+  };
   
 
   interface UserIndicatorProps {
