@@ -2,38 +2,6 @@ import React, { useMemo, useState } from 'react';
 import { Card, CardTitle, CardHeader, CardContent } from '@/components/ui/card';
 import { Crown, Rocket } from 'lucide-react';
 
-const StyleSheet = () => (
-  <style>
-    {`
-      @keyframes move-stripe {
-        0% {
-          transform: translateX(100%) rotate(45deg);
-        }
-        100% {
-          transform: translateX(-100%) rotate(45deg);
-        }
-      }
-
-      @keyframes bounce-subtle {
-        0%, 100% {
-          transform: translateY(0) translateX(-50%);
-        }
-        50% {
-          transform: translateY(-8px) translateX(-50%);
-        }
-      }
-
-      .animate-move-stripes {
-        animation: move-stripe 20s linear infinite;
-      }
-
-      .animate-bounce-subtle {
-        animation: bounce-subtle 3s infinite;
-      }
-    `}
-  </style>
-);
-
 interface DualUserProgressProps {
   user1: {
     previous?: number;
@@ -199,10 +167,10 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1: rawUser1, us
   const MovingBackground = () => (
     <div className="absolute inset-0 overflow-hidden">
       {/* Day/Night Sky Base */}
-      <div className="absolute inset-0 bg-gradient-to-b from-sky-300 to-sky-100 dark:from-slate-900 dark:to-slate-800 transition-colors duration-1000" />
+      <div className="absolute inset-0 bg-gradient-to-b from-sky-300 to-sky-100 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300" />
   
       {/* Sun/Moon */}
-      <div className="absolute right-[40%] top-[5%] transition-opacity duration-1000">
+      <div className="absolute right-[30%] top-[5%] transition-opacity duration-300">
         {/* Sun - visible in light mode */}
         <div className="w-16 h-16 rounded-full bg-yellow-300 block dark:hidden 
              shadow-[0_0_50px_rgba(250,204,21,0.4)] 
@@ -303,32 +271,46 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1: rawUser1, us
   
           @keyframes move-clouds-1 {
             0% { transform: translateX(0%); }
-            100% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
           }
   
           @keyframes move-clouds-2 {
-            0% { transform: translateX(-100%); }
+            0% { transform: translateX(100%); }
             100% { transform: translateX(0%); }
           }
   
           @keyframes move-stars-1 {
             0% { transform: translateX(0%); }
-            100% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
           }
   
           @keyframes move-stars-2 {
-            0% { transform: translateX(-100%); }
+            0% { transform: translateX(100%); }
             100% { transform: translateX(0%); }
           }
   
           @keyframes move-hills-1 {
             0% { transform: translateX(0%); }
-            100% { transform: translateX(-100%); }
+            100% { transform: translateX(-10%); }
           }
   
           @keyframes move-hills-2 {
             0% { transform: translateX(0%); }
             100% { transform: translateX(-100%); }
+          }
+
+          @keyframes bounce-subtle {
+            0%, 100% {
+              transform: translateY(0) translateX(-50%);
+            }
+            50% {
+              transform: translateY(-8px) translateX(-50%);
+            }
+          }
+
+
+          .animate-bounce-subtle {
+            animation: bounce-subtle 3s infinite;
           }
   
           .animate-pulse-slow {
@@ -336,27 +318,27 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1: rawUser1, us
           }
   
           .animate-move-clouds-1 {
-            animation: move-clouds-1 60s linear infinite;
+            animation: move-clouds-1 30s linear infinite;
           }
   
           .animate-move-clouds-2 {
-            animation: move-clouds-2 60s linear infinite;
+            animation: move-clouds-2 30s linear infinite;
           }
   
           .animate-move-stars-1 {
-            animation: move-stars-1 80s linear infinite;
+            animation: move-stars-1 30s linear infinite;
           }
   
           .animate-move-stars-2 {
-            animation: move-stars-2 80s linear infinite;
+            animation: move-stars-2 30s linear infinite;
           }
   
           .animate-move-hills-1 {
-            animation: move-hills-1 40s linear infinite;
+            animation: move-hills-1 10s linear infinite;
           }
   
           .animate-move-hills-2 {
-            animation: move-hills-2 40s linear infinite;
+            animation: move-hills-2 10s linear infinite;
           }
   
           @keyframes twinkle {
@@ -445,13 +427,12 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1: rawUser1, us
 
   return (
     <>
-      <StyleSheet />
       <Card className="w-full shadow-lg rounded-lg overflow-hidden bg-gradient-to-br from-white/80 via-white/90 to-white/80 dark:from-slate-900/80 dark:via-slate-900/90 dark:to-slate-900/80 backdrop-blur-sm border border-white/20 dark:border-slate-800/20 relative">
         <MovingBackground />
-        <CardHeader className="border-b p-4 bg-gradient-to-r from-purple-600/10 to-blue-600/10 dark:from-purple-900/20 dark:to-blue-900/20">
-          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <Rocket className="w-5 h-5 text-amber-500" />
-            <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+        <CardHeader className="border-b p-4 relative z-10 bg-gradient-to-r from-purple-600/15 to-blue-600/15 dark:from-purple-900/20 dark:to-blue-900/20 backdrop-blur-sm">
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold relative z-20">
+            <Rocket className="w-5 h-5 text-amber-500" /> 
+            <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent font-bold">
               Today's Sprint
             </span>
           </CardTitle>
@@ -522,7 +503,7 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1: rawUser1, us
               isFirstUser={false}
             />
           </div>
-          <div className="mt-4 text-center text-sm text-muted-foreground">
+          <div className="mt-4 text-center text-sm text-white-200">
             {(() => {
               if (user1.current === user2.current) {
                 return null;
