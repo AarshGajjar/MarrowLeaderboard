@@ -269,14 +269,14 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1: rawUser1, us
           {/* First Set of Hills */}
           <div className="absolute bottom-0 w-full h-full animate-move-hills-1">
             <div
-              className="absolute bottom-0 w-full h-32 bg-gradient-to-b from-green-300 to-green-400 dark:from-purple-700 dark:to-purple-800"
+              className="absolute bottom-0 w-full h-32 bg-gradient-to-b from-green-300 to-green-400 dark:from-cyan-600 dark:to-purple-800"
               style={{
                 borderRadius: '50% 50% 0 0 / 100% 100% 0 0',
-                transform: 'scaleX(2) translateX(25%)',
+                transform: 'scaleX(2) translateX(35%)',
               }}
             />
             <div
-              className="absolute bottom-0 w-full h-24 bg-gradient-to-b from-green-400 to-green-500 dark:from-purple-600 dark:to-purple-700"
+              className="absolute bottom-0 w-full h-24 bg-gradient-to-b from-green-400 to-green-500 dark:from-cyan-600 dark:to-slate-700"
               style={{
                 borderRadius: '40% 60% 0 0 / 100% 100% 0 0',
                 transform: 'scaleX(2) translateX(15%)',
@@ -359,11 +359,11 @@ const DualUserProgress: React.FC<DualUserProgressProps> = ({ user1: rawUser1, us
           }
   
           .animate-move-hills-1 {
-            animation: move-hills-1 10s linear infinite;
+            animation: move-hills-1 30s linear infinite;
           }
   
           .animate-move-hills-2 {
-            animation: move-hills-2 10s linear infinite;
+            animation: move-hills-2 30s linear infinite;
           }
   
           @keyframes twinkle {

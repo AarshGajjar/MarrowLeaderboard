@@ -173,7 +173,7 @@ export class EmailNotificationService {
         await this.rateLimitedSend({
           to_email: recipientEmail,
           message_html: message,
-          subject: 'Qbank Challenge Activity update',
+          subject: 'Activity update',
         });
 
         successCount++;
@@ -476,15 +476,14 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
   } = {}): number => {
     const {
       minSize = 0.01, 
-      maxSize = 0.10, 
-      nonLinearExponent = 1.5 // Non-linear scaling
+      maxSize = 0.07,
     } = options;
   
     const maxQuestions = Math.max(...filteredLogs.map(log => log.completed));
     if (maxQuestions === 0) return minSize;
   
     const normalizedCompletion = completed / maxQuestions;
-    return minSize + Math.pow(normalizedCompletion, nonLinearExponent) * (maxSize - minSize);
+    return minSize + normalizedCompletion * (maxSize - minSize);
   };
 
   // UI Component rendering
