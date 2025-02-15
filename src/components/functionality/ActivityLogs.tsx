@@ -422,7 +422,7 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
 
     } catch (error) {
       console.error('Notification error:', error);
-      setEmailError('Failed to send SMS notification');
+      setEmailError('Failed to send Email notification');
       
       // Clear error after 5 seconds
       setTimeout(() => setEmailError(null), 5000);
