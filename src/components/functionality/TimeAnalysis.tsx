@@ -8,11 +8,14 @@ import {
   Line, 
   XAxis, 
   YAxis, 
+  ZAxis,
+  Cell,
   Tooltip, 
   CartesianGrid, 
   ReferenceLine, 
   Label 
 } from 'recharts';
+import Plot from 'react-plotly.js';
 
 interface ActivityLog {
   user_type: string;
@@ -32,21 +35,22 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
   selectedUser, 
   dateRange = 'all' 
 }) => {
-  const [viewType, setViewType] = useState<'chart' | 'scatter' | 'clock'>('chart');
+  const [viewType, setViewType] = useState<'chart' | 'clock' | '3d'>('chart');
 
   const { 
     hourlyData, 
     averageAccuracy, 
     peakPeriod, 
     lowPeriod, 
-    scatterData 
+    scatterData,
+    plot3DData 
   } = useMemo(() => {
     // Filter logs based on selected user
     const filteredLogs = activityLogs.filter(log => 
       selectedUser === 'both' || log.user_type === selectedUser
     );
 
-    // Interval data processing (unchanged from previous version)
+    // Interval data processing
     const intervals = [
       { label: '12 AM - 3 AM', range: [0, 3] },
       { label: '3 AM - 6 AM', range: [3, 6] },
@@ -77,8 +81,8 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
       };
     }).filter(interval => interval.totalQuestions > 0);
 
-    // Scatter plot data preparation
-    const scatterData = filteredLogs.map(log => {
+    // Process data for 3D plots
+    const scatterPlot3DData = filteredLogs.map(log => {
       const date = new Date(log.timestamp);
       const hour = date.getHours() + date.getMinutes() / 60;
       const accuracy = log.completed > 0 
@@ -88,6 +92,7 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
       return {
         x: hour,
         y: accuracy,
+        z: log.completed,
         timestamp: log.timestamp,
         completed: log.completed,
         correct: log.correct
@@ -114,9 +119,88 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
       averageAccuracy: average,
       peakPeriod: peak,
       lowPeriod: low,
-      scatterData
+      scatterData: scatterPlot3DData,
+      plot3DData: scatterPlot3DData
     };
   }, [activityLogs, selectedUser, dateRange]);
+
+  const render3DPlot = () => {
+    const x = plot3DData.map(d => d.x);
+    const y = plot3DData.map(d => d.y);
+    const z = plot3DData.map(d => d.z);
+
+    const colors = plot3DData.map(d => {
+      if (d.y >= 70) return '#22c55e'; // green
+      if (d.y >= 50) return '#eab308'; // yellow
+      return '#ef4444'; // red
+    });
+
+    return (
+      <Plot
+        data={[
+          {
+            type: 'scatter3d',
+            mode: 'markers',
+            x: x,
+            y: y,
+            z: z,
+            marker: {
+              size: 6,
+              color: colors,
+              opacity: 0.8
+            },
+            hovertemplate: `
+              Time: %{x:.1f}h<br>
+              Accuracy: %{y:.1f}%<br>
+              Questions: %{z}<br>
+              <extra></extra>
+            `
+          }
+        ]}
+        layout={{
+          scene: {
+            xaxis: {
+              title: 'Time of Day (hours)',
+              ticktext: [
+                '12 AM', '3 AM', '6 AM', '9 AM',
+                '12 PM', '3 PM', '6 PM', '9 PM', '12 AM'
+              ],
+              tickvals: [0, 3, 6, 9, 12, 15, 18, 21, 24],
+              range: [0, 24]
+            },
+            yaxis: {
+              title: 'Accuracy (%)',
+              range: [0, 100]
+            },
+            zaxis: {
+              title: 'Questions Completed'
+            },
+            camera: {
+              eye: { x: 1.5, y: 1.5, z: 1.5 }
+            }
+          },
+          margin: { l: 0, r: 0, t: 0, b: 0 },
+          paper_bgcolor: 'rgba(0,0,0,0)',
+          plot_bgcolor: 'rgba(0,0,0,0)',
+          showlegend: false,
+          autosize: true,
+          width: undefined,
+          height: undefined
+        }}
+        config={{
+          responsive: true,
+          displayModeBar: true,
+          modeBarButtonsToRemove: [
+            'lasso2d',
+            'select2d',
+            'hoverClosestCartesian',
+            'hoverCompareCartesian'
+          ]
+        }}
+        className="w-full h-full"
+      />
+    );
+  };
 
   const getClockIndicators = (data: any[]) => {
     return Array.from({ length: 24 }, (_, hour) => {
@@ -203,67 +287,6 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
   };
 
   const renderChart = () => {
-    if (viewType === 'scatter') {
-      return (
-        <ResponsiveContainer width="100%" height="100%">
-          <ScatterChart margin={{ top: 20, right: 10, bottom: 20, left: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-            <XAxis 
-              type="number"
-              dataKey="x"
-              domain={[0, 24]}
-              ticks={[0, 6, 12, 18, 24]}
-              tick={{ fill: '#64748b', fontSize: 10 }}
-              tickFormatter={(value) => {
-                const hours = Math.floor(value);
-                const ampm = hours >= 12 ? 'PM' : 'AM';
-                const formattedHours = hours % 12 || 12;
-                return `${formattedHours} ${ampm}`;
-              }}
-              tickMargin={8}
-            />
-            <YAxis 
-              domain={[0, 100]}
-              tick={{ fill: '#64748b', fontSize: 10 }}
-              tickMargin={8}
-            />
-            <Tooltip 
-              content={({ payload }) => {
-                if (!payload?.length) return null;
-                const data = payload[0].payload;
-                return (
-                  <div className="bg-white dark:bg-gray-800 p-4 shadow-lg rounded-lg border border-gray-100 dark:border-gray-700">
-                    <p className="font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                      {new Date(data.timestamp).toLocaleTimeString()}
-                    </p>
-                    <div className="space-y-1">
-                      <div className="flex justify-between gap-4">
-                        <span className="text-violet-600 dark:text-violet-400">Accuracy:</span>
-                        <span className="font-medium text-gray-700 dark:text-gray-300">{data.y}%</span>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <span className="text-violet-400 dark:text-violet-300">Correct:</span>
-                        <span className="font-medium text-gray-700 dark:text-gray-300">{data.correct}</span>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <span className="text-gray-500 dark:text-gray-400">Total:</span>
-                        <span className="font-medium text-gray-700 dark:text-gray-300">{data.completed}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }}
-            />
-            <Scatter 
-              data={scatterData} 
-              fill="#7c3aed"
-              fillOpacity={0.5}
-              dataKey="y"
-            />
-          </ScatterChart>
-        </ResponsiveContainer>
-      );
-    }
 
     return (
       <ResponsiveContainer width="100%" height="100%">
@@ -353,7 +376,7 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
     <div className="w-full">
       <div className="flex flex-wrap gap-4 justify-between items-center mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Performance by 3-Hour Intervals</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Performance by Time</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">Accuracy trends and activity patterns</p>
         </div>
         <div className="flex gap-4 items-center">
@@ -369,16 +392,6 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
               Chart
             </button>
             <button 
-              onClick={() => setViewType('scatter')}
-              className={`px-3 py-1 rounded-md text-sm ${
-                viewType === 'scatter' 
-                  ? 'bg-violet-600 text-white dark:bg-violet-500' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-              }`}
-            >
-              Scatter
-            </button>
-            <button 
               onClick={() => setViewType('clock')}
               className={`px-3 py-1 rounded-md text-sm ${
                 viewType === 'clock' 
@@ -388,15 +401,44 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({
             >
               Clock
             </button>
+            <button 
+              onClick={() => setViewType('3d')}
+              className={`px-3 py-1 rounded-md text-sm ${
+                viewType === '3d' 
+                  ? 'bg-violet-600 text-white dark:bg-violet-500' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              3D View
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="relative h-80 sm:h-96 mb-4">
-        {viewType === 'clock' ? renderClock() : viewType === 'scatter' ? renderChart() : renderChart()}
+      <div className={`relative ${viewType === '3d' ? 'h-[600px]' : 'h-80 sm:h-96'} mb-4`}>
+        {viewType === '3d' ? render3DPlot() : 
+         viewType === 'clock' ? renderClock() : 
+         renderChart()}
       </div>
 
-      {(peakPeriod.accuracy > 0 || lowPeriod.accuracy < 100) && (
+      {viewType === '3d' && (
+        <div className="flex justify-center gap-6 mt-4">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <span className="text-sm text-gray-600 dark:text-gray-400">≥70% Accuracy</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+            <span className="text-sm text-gray-600 dark:text-gray-400">50-69% Accuracy</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-red-500"></div>
+            <span className="text-sm text-gray-600 dark:text-gray-400">&lt;50% Accuracy</span>
+          </div>
+        </div>
+      )}
+
+      {(peakPeriod.accuracy > 0 || lowPeriod.accuracy < 100) && viewType !== '3d' && (
         <div className="flex gap-4 justify-end">
           {peakPeriod.accuracy > 0 && (
             <div className="bg-green-50 dark:bg-green-900/30 px-3 py-2 rounded-lg text-sm">
