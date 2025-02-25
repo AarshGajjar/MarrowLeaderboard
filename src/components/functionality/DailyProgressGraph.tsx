@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, ComposedChart } from 'recharts';
 import { Flame, Calendar, Brain } from 'lucide-react';
 import MetricCard from '@/components/ui/MetricCard';
@@ -51,10 +52,33 @@ const DailyProgressGraph: React.FC<ProgressDashboardProps> = ({
   activityLogs, 
   selectedUser
 }) => {
+  const [dateRange, setDateRange] = useState<'week' | 'month' | 'all'>('all');
+
+  const getFilteredDataByRange = (data: DailyData[]) => {
+    const today = new Date();
+    const cutoffDate = new Date();
+    
+    switch (dateRange) {
+      case 'week':
+        cutoffDate.setDate(today.getDate() - 7);
+        break;
+      case 'month':
+        cutoffDate.setMonth(today.getMonth() - 1);
+        break;
+      default:
+        return data;
+    }
+
+    return data.filter(item => {
+      const itemDate = new Date(item.date);
+      return itemDate >= cutoffDate && itemDate <= today;
+    });
+  };
+
   const filteredData = useMemo(() => {
     if (!Array.isArray(dailyData) || dailyData.length === 0) return [];
-    return dailyData; // Return all data without filtering
-  }, [dailyData]);
+    return getFilteredDataByRange(dailyData);
+  }, [dailyData, dateRange]);
 
   const stats = useMemo(() => {
     if (!Array.isArray(dailyData)) return { 
@@ -85,7 +109,7 @@ const DailyProgressGraph: React.FC<ProgressDashboardProps> = ({
   const processedData = useMemo(() => {
     if (!Array.isArray(dailyData)) return [];
     
-    return dailyData
+    return filteredData
       .filter(data => data !== null && data !== undefined)
       .map(data => {
         const userData = selectedUser === 'user1' ? data.user1Data : data.user2Data;
@@ -102,7 +126,7 @@ const DailyProgressGraph: React.FC<ProgressDashboardProps> = ({
       })
       .filter((day): day is NonNullable<typeof day> => day !== null)
       .filter(day => day.completed > 0);
-  }, [dailyData, selectedUser]);
+  }, [filteredData, selectedUser]);
 
   const trendData = useMemo(() => {
     const today = new Date(getDate()).toISOString().split('T')[0];
@@ -117,7 +141,7 @@ const DailyProgressGraph: React.FC<ProgressDashboardProps> = ({
           accuracy: stats.accuracy
         };
       })
-      .filter(day => day.completed > 0) // Filter out days with no activity
+      .filter(day => day.completed > 0)
       .map((data, index, activeArray) => {
         const window = activeArray
           .slice(Math.max(0, index - windowSize + 1), index + 1);
@@ -142,9 +166,21 @@ const DailyProgressGraph: React.FC<ProgressDashboardProps> = ({
     <div className="w-full">
       <Card className="w-full dark:bg-slate-900">
         <CardHeader>
-          <CardTitle className="text-xl md:text-2xl dark:text-white">
-            Stats Dashboard - {selectedUser === 'user1' ? user1Name : user2Name}
-          </CardTitle>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <CardTitle className="text-xl md:text-2xl dark:text-white">
+              Stats Dashboard - {selectedUser === 'user1' ? user1Name : user2Name}
+            </CardTitle>
+            <Select value={dateRange} onValueChange={(value: 'week' | 'month' | 'all') => setDateRange(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select date range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="week">Last Week</SelectItem>
+                <SelectItem value="month">Last Month</SelectItem>
+                <SelectItem value="all">All Time</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -185,115 +221,115 @@ const DailyProgressGraph: React.FC<ProgressDashboardProps> = ({
               <TabsContent value="progress">
                 <div className="w-full aspect-[4/3] sm:aspect-[16/9]">
                   <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={processedData} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} stroke="var(--grid-color)" />
-                    <XAxis 
-                    dataKey="date" 
-                    tick={{ fontSize: 12, fill: "var(--text-color)" }}
-                    tickMargin={10}
-                    />
-                    <YAxis 
-                    yAxisId="left"
-                    label={{ value: 'Questions', angle: -90, position: 'insideLeft', offset: 0, fill: "var(--text-color)" }}
-                    domain={[0, 'auto']}
-                    tick={{ fontSize: 12, fill: "var(--text-color)" }}
-                    />
-                    <YAxis 
-                    yAxisId="right" 
-                    orientation="right"
-                    label={{ value: 'Accuracy %', angle: 90, position: 'insideRight', offset: 0, fill: "var(--text-color)" }}
-                    domain={[0, 100]}
-                    tick={{ fontSize: 12, fill: "var(--text-color)" }}
-                    />
-                    <Tooltip 
-                    formatter={(value, name) => {
-                      if (name === "Accuracy") {
-                      return [`${value}%`, name];
-                      }
-                      return [value, name];
-                    }}
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid var(--border)',
-                      borderRadius: '6px',
-                      color: 'var(--foreground)'
-                    }}
-                    labelStyle={{
-                      color: 'var(--foreground)'
-                    }}
-                    />
-                    <Bar
-                      yAxisId="left"
-                      dataKey="completed"
-                      fill="#93c5fd"
-                      name="Questions Completed"
-                      opacity={0.3}
-                    />
-                    <Line
-                      yAxisId="right"
-                      type="monotone"
-                      dataKey="accuracy"
-                      stroke="#7c3aed"
-                      name="Accuracy"
-                    />
-                  </ComposedChart>
+                    <ComposedChart data={processedData} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} stroke="var(--grid-color)" />
+                      <XAxis 
+                        dataKey="date" 
+                        tick={{ fontSize: 12, fill: "var(--text-color)" }}
+                        tickMargin={10}
+                      />
+                      <YAxis 
+                        yAxisId="left"
+                        label={{ value: 'Questions', angle: -90, position: 'insideLeft', offset: 0, fill: "var(--text-color)" }}
+                        domain={[0, 'auto']}
+                        tick={{ fontSize: 12, fill: "var(--text-color)" }}
+                      />
+                      <YAxis 
+                        yAxisId="right" 
+                        orientation="right"
+                        label={{ value: 'Accuracy %', angle: 90, position: 'insideRight', offset: 0, fill: "var(--text-color)" }}
+                        domain={[0, 100]}
+                        tick={{ fontSize: 12, fill: "var(--text-color)" }}
+                      />
+                      <Tooltip 
+                        formatter={(value, name) => {
+                          if (name === "Accuracy") {
+                            return [`${value}%`, name];
+                          }
+                          return [value, name];
+                        }}
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid var(--border)',
+                          borderRadius: '6px',
+                          color: 'var(--foreground)'
+                        }}
+                        labelStyle={{
+                          color: 'var(--foreground)'
+                        }}
+                      />
+                      <Bar
+                        yAxisId="left"
+                        dataKey="completed"
+                        fill="#93c5fd"
+                        name="Questions Completed"
+                        opacity={0.3}
+                      />
+                      <Line
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="accuracy"
+                        stroke="#7c3aed"
+                        name="Accuracy"
+                      />
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </div>
-                </TabsContent>
+              </TabsContent>
 
-                <TabsContent value="trends">
+              <TabsContent value="trends">
                 <div className="w-full aspect-[4/3] sm:aspect-[16/9]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={trendData} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.3} stroke="var(--grid-color)" />
                       <XAxis 
-                      dataKey="date" 
-                      tick={{ fontSize: 12, fill: "var(--text-color)" }}
-                      tickMargin={10}
+                        dataKey="date" 
+                        tick={{ fontSize: 12, fill: "var(--text-color)" }}
+                        tickMargin={10}
                       />
                       <YAxis 
-                      yAxisId="left"
-                      label={{ value: 'Avg. Questions', angle: -90, position: 'insideLeft', offset: 0, fill: "var(--text-color)" }}
-                      domain={[0, 'auto']}
-                      tick={{ fontSize: 12, fill: "var(--text-color)" }}
+                        yAxisId="left"
+                        label={{ value: 'Avg. Questions', angle: -90, position: 'insideLeft', offset: 0, fill: "var(--text-color)" }}
+                        domain={[0, 'auto']}
+                        tick={{ fontSize: 12, fill: "var(--text-color)" }}
                       />
                       <YAxis 
-                      yAxisId="right" 
-                      orientation="right"
-                      label={{ value: 'Avg. Accuracy %', angle: 90, position: 'insideRight', offset: 0, fill: "var(--text-color)" }}
-                      domain={[0, 100]}
-                      tick={{ fontSize: 12, fill: "var(--text-color)" }}
+                        yAxisId="right" 
+                        orientation="right"
+                        label={{ value: 'Avg. Accuracy %', angle: 90, position: 'insideRight', offset: 0, fill: "var(--text-color)" }}
+                        domain={[0, 100]}
+                        tick={{ fontSize: 12, fill: "var(--text-color)" }}
                       />
                       <Tooltip 
-                      formatter={(value, name) => {
-                        if (name === "7-day Avg. Accuracy") {
-                        return [`${value}%`, name];
-                        }
-                        return [value, name];
-                      }}
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid var(--border)',
-                        borderRadius: '6px',
-                        color: 'var(--foreground)'
-                      }}
-                      labelStyle={{
-                        color: 'var(--foreground)'
-                      }}
+                        formatter={(value, name) => {
+                          if (name === "7-day Avg. Accuracy") {
+                            return [`${value}%`, name];
+                          }
+                          return [value, name];
+                        }}
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid var(--border)',
+                          borderRadius: '6px',
+                          color: 'var(--foreground)'
+                        }}
+                        labelStyle={{
+                          color: 'var(--foreground)'
+                        }}
                       />
                       <Line
-                      yAxisId="left"
-                      type="monotone"
-                      dataKey="avgCompleted"
-                      stroke="#93c5fd"
-                      name="7-day Avg. Completed"
+                        yAxisId="left"
+                        type="monotone"
+                        dataKey="avgCompleted"
+                        stroke="#93c5fd"
+                        name="7-day Avg. Completed"
                       />
                       <Line
-                      yAxisId="right"
-                      type="monotone"
-                      dataKey="avgAccuracy"
-                      stroke="#7c3aed"
-                      name="7-day Avg. Accuracy"
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="avgAccuracy"
+                        stroke="#7c3aed"
+                        name="7-day Avg. Accuracy"
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -303,7 +339,7 @@ const DailyProgressGraph: React.FC<ProgressDashboardProps> = ({
                 <TimeAnalysis 
                   activityLogs={activityLogs} 
                   selectedUser={selectedUser || 'user1'} 
-                  dateRange="all" // Pass 'all' as a fixed value
+                  dateRange={dateRange}
                 />
               </TabsContent>
             </Tabs>

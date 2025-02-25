@@ -90,16 +90,16 @@ const getCurrentDate = () => {
 export class EmailNotificationService {
   private lastMessageTime: number = 0;
   private minDelayBetweenMessages: number = 1000;
-
+  
   private readonly EMAIL_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
   private readonly EMAIL_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
   private readonly EMAIL_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
   private readonly RECIPIENT_EMAILS = ['aarshgajjar16@gmail.com', 'charaniyaaman3@gmail.com'];
-
+  
   constructor() {
     emailjs.init(this.EMAIL_PUBLIC_KEY);
   }
-
+  
   private async rateLimitedSend(emailData: any): Promise<void> {
     const now = Date.now();
     const timeToWait = Math.max(0, this.minDelayBetweenMessages - (now - this.lastMessageTime));
@@ -111,78 +111,148 @@ export class EmailNotificationService {
     this.lastMessageTime = Date.now();
     await emailjs.send(this.EMAIL_SERVICE_ID, this.EMAIL_TEMPLATE_ID, emailData);
   }
-
+  
   private formatSection(title: string, content: string): string {
     return `
-      <div style="margin-bottom: 15px;">
-        <strong style="color: #6366f1;">${title}</strong>
-        <div style="margin-top: 5px; color: #374151;">${content}</div>
+      <div style="margin-bottom: 20px; background-color: #f9fafb; border-radius: 8px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <strong style="color: #4f46e5; display: block; margin-bottom: 8px; font-size: 16px;">${title}</strong>
+        <div style="color: #374151; line-height: 1.5;">${content}</div>
       </div>
     `;
   }
-
+  
   formatActivityMessage(
     log: ActivityLog, 
-    userNames: { user1: string; user2: string }, 
+    userNames: { user1: string; user2: string },
     todaysTotals: { user1: number; user2: number }
   ): string {
     const userName = userNames[log.user_type];
     const accuracy = calculateAccuracy(log.correct, log.completed);
-    const time = new Date(log.timestamp).toLocaleTimeString('en-IN', { 
+    const time = new Date(log.timestamp).toLocaleTimeString('en-IN', {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false 
+      hour12: false
     });
-
+    
     const leader = todaysTotals.user1 > todaysTotals.user2 ? userNames.user1 : userNames.user2;
     const difference = Math.abs(todaysTotals.user1 - todaysTotals.user2);
-
-    const sections = [
-      `<div style="margin-bottom: 15px; color: #374151;">
-        ${userName} completed ${log.completed} questions with ${log.correct} correct answers (${accuracy}% accuracy) at ${time}
-      </div>`,
-      this.formatSection(
-        'Today\'s Progress',
-        `
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
-          <div style="padding: 10px; background-color: #faf5ff; border-radius: 4px;">
-            <strong style="color: #9333ea;">${userNames.user1}</strong>
-            <div style="margin-top: 5px;">${todaysTotals.user1} questions</div>
+    
+    // Set username for email header
+    const headerName = userName;
+    
+    // Parse accuracy to number for comparison (fix the operator error)
+    const accuracyNum = parseFloat(accuracy.toString());
+    
+    const activitySummary = `
+      <div style="margin-bottom: 20px; background-color: #f0f9ff; border-left: 4px solid #3b82f6; padding: 15px; border-radius: 6px;">
+        <span style="font-size: 18px; font-weight: 500; color: #1e40af;">${userName}</span>
+        <div style="margin-top: 10px; color: #374151; line-height: 1.6;">
+          Completed 
+          <span style="font-weight: 500;">${log.completed}</span> questions with 
+          <span style="font-weight: 500; color: ${accuracyNum >= 70 ? '#047857' : '#b91c1c'};">${log.correct}</span> correct answers 
+          (<span style="font-weight: 500; color: ${accuracyNum >= 70 ? '#047857' : '#b91c1c'};">${accuracy}%</span> accuracy) at 
+          <span style="color: #4b5563; font-weight: 500;">${time}</span>
+        </div>
+      </div>
+    `;
+    
+    const progressSection = this.formatSection(
+      'Today\'s Progress',
+      `
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+        <div style="padding: 15px; background-color: #faf5ff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-align: center;">
+          <div style="color: #9333ea; font-weight: 600; font-size: 16px; margin-bottom: 5px;">${userNames.user1}</div>
+          <div style="font-size: 24px; font-weight: 700;">${todaysTotals.user1}</div>
+          <div style="color: #6b7280; font-size: 14px;">questions completed</div>
+        </div>
+        <div style="padding: 15px; background-color: #eff6ff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-align: center;">
+          <div style="color: #3b82f6; font-weight: 600; font-size: 16px; margin-bottom: 5px;">${userNames.user2}</div>
+          <div style="font-size: 24px; font-weight: 700;">${todaysTotals.user2}</div>
+          <div style="color: #6b7280; font-size: 14px;">questions completed</div>
+        </div>
+      </div>
+      `
+    );
+    
+    const leaderSection = this.formatSection(
+      'Today\'s Leader',
+      `
+      <div style="background-color: #f8fafc; border-radius: 8px; padding: 15px; text-align: center;">
+        <div style="font-size: 18px; font-weight: 600; color: ${leader === userNames.user1 ? '#9333ea' : '#3b82f6'};">
+          ${leader}
+        </div>
+        <div style="margin-top: 5px; color: #374151;">
+          is leading by <span style="font-weight: 600;">${difference}</span> questions
+        </div>
+        
+        <div style="margin-top: 15px;">
+          <!-- User 1 Progress -->
+          <div style="margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+              <div style="font-size: 14px; font-weight: 500; color: #9333ea;">${userNames.user1}</div>
+              <div style="font-size: 14px; font-weight: 500; color: #6b7280;">${todaysTotals.user1} questions</div>
+            </div>
+            <div style="height: 8px; background-color: #e5e7eb; border-radius: 4px; overflow: hidden;">
+              <div style="height: 100%; width: ${Math.min(100, Math.round((todaysTotals.user1 / Math.max(todaysTotals.user1, todaysTotals.user2)) * 100))}%; 
+                    background-color: #9333ea; border-radius: 4px;"></div>
+            </div>
           </div>
-          <div style="padding: 10px; background-color: #eff6ff; border-radius: 4px;">
-            <strong style="color: #3b82f6;">${userNames.user2}</strong>
-            <div style="margin-top: 5px;">${todaysTotals.user2} questions</div>
+          
+          <!-- User 2 Progress -->
+          <div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+              <div style="font-size: 14px; font-weight: 500; color: #3b82f6;">${userNames.user2}</div>
+              <div style="font-size: 14px; font-weight: 500; color: #6b7280;">${todaysTotals.user2} questions</div>
+            </div>
+            <div style="height: 8px; background-color: #e5e7eb; border-radius: 4px; overflow: hidden;">
+              <div style="height: 100%; width: ${Math.min(100, Math.round((todaysTotals.user2 / Math.max(todaysTotals.user1, todaysTotals.user2)) * 100))}%; 
+                    background-color: #3b82f6; border-radius: 4px;"></div>
+            </div>
           </div>
         </div>
-        `
-      ),
-      this.formatSection(
-        'Today\'s Leader',
-        `${leader} is leading today by ${difference} questions`
-      )
-    ];
-
-    return sections.join('');
+      </div>
+      `
+    );
+    
+    return `
+      <!-- Username for header -->
+      <div id="header_username" style="display: none;">${headerName}</div>
+      
+      ${activitySummary}
+      ${progressSection}
+      ${leaderSection}
+    `;
   }
-
+  
   async sendEmail(message: string): Promise<void> {
     let successCount = 0;
-
+    
+    // Format the current date for the email
+    const formattedDate = new Date().toLocaleString('en-IN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+    
     for (const recipientEmail of this.RECIPIENT_EMAILS) {
       try {
         await this.rateLimitedSend({
           to_email: recipientEmail,
           message_html: message,
-          subject: 'Activity update',
+          subject: `Study Activity Update`,
+          formatDate: formattedDate
         });
-
+        
         successCount++;
         console.log(`Email sent successfully to ${recipientEmail}`);
       } catch (error) {
         console.error(`Failed to send email to ${recipientEmail}:`, error);
       }
     }
-
+    
     if (successCount === 0) {
       throw new Error('Failed to send email to any recipient');
     }

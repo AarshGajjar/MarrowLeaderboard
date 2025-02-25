@@ -64,7 +64,7 @@ export const calculateConsistencyAndStreak = (userData: any[]) => {
 
   for (const day of validData) {
     const accuracy = Number((day.correct / day.completed * 100).toFixed(2));
-    if (day.completed >= (DAILY_TARGET / 2) && accuracy >= MIN_ACCURACY_TARGET) {
+    if (day.completed >= (DAILY_TARGET)) {
       const currentDate = new Date(day.date);
       const currentUTCMidnight = getUTCMidnight(currentDate);
 
