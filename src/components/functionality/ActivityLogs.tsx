@@ -112,15 +112,6 @@ export class EmailNotificationService {
     await emailjs.send(this.EMAIL_SERVICE_ID, this.EMAIL_TEMPLATE_ID, emailData);
   }
   
-  private formatSection(title: string, content: string): string {
-    return `
-      <div style="margin-bottom: 20px; background-color: #f9fafb; border-radius: 8px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-        <strong style="color: #4f46e5; display: block; margin-bottom: 8px; font-size: 16px;">${title}</strong>
-        <div style="color: #374151; line-height: 1.5;">${content}</div>
-      </div>
-    `;
-  }
-  
   formatActivityMessage(
     log: ActivityLog, 
     userNames: { user1: string; user2: string },
@@ -136,61 +127,51 @@ export class EmailNotificationService {
     
     const leader = todaysTotals.user1 > todaysTotals.user2 ? userNames.user1 : userNames.user2;
     const difference = Math.abs(todaysTotals.user1 - todaysTotals.user2);
-    
-    // Set username for email header
-    const headerName = userName;
-    
-    // Parse accuracy to number for comparison (fix the operator error)
     const accuracyNum = parseFloat(accuracy.toString());
     
+    // Compact latest activity summary
     const activitySummary = `
-      <div style="margin-bottom: 20px; background-color: #f0f9ff; border-left: 4px solid #3b82f6; padding: 15px; border-radius: 6px;">
-        <span style="font-size: 18px; font-weight: 500; color: #1e40af;">${userName}</span>
-        <div style="margin-top: 10px; color: #374151; line-height: 1.6;">
-          Completed 
-          <span style="font-weight: 500;">${log.completed}</span> questions with 
-          <span style="font-weight: 500; color: ${accuracyNum >= 70 ? '#047857' : '#b91c1c'};">${log.correct}</span> correct answers 
-          (<span style="font-weight: 500; color: ${accuracyNum >= 70 ? '#047857' : '#b91c1c'};">${accuracy}%</span> accuracy) at 
-          <span style="color: #4b5563; font-weight: 500;">${time}</span>
+      <div style="margin-bottom: 15px; color: #ffffff;">
+        <span style="font-size: 20px; font-weight: 500;">${userName}</span>
+        <div style="margin-top: 8px; line-height: 1.4;">
+          Completed <span style="font-weight: 500;">${log.completed}</span> questions with 
+          <span style="font-weight: 500; color: ${accuracyNum >= 70 ? '#a5f3fc' : '#fecaca'};">${accuracy}%</span> accuracy at ${time}
         </div>
       </div>
     `;
     
-    const progressSection = this.formatSection(
-      'Today\'s Progress',
-      `
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
-        <div style="padding: 15px; background-color: #faf5ff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-align: center;">
-          <div style="color: #9333ea; font-weight: 600; font-size: 16px; margin-bottom: 5px;">${userNames.user1}</div>
-          <div style="font-size: 24px; font-weight: 700;">${todaysTotals.user1}</div>
-          <div style="color: #6b7280; font-size: 14px;">questions completed</div>
+    // Combined progress section
+    const progressSection = `
+      <div style="margin-bottom: 20px; background-color: #f9fafb; border-radius: 8px; padding: 15px;">
+        <strong style="color: #4f46e5; display: block; margin-bottom: 10px; font-size: 16px;">Today's Progress</strong>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <!-- User 1 -->
+          <div style="padding: 12px; background-color: #faf5ff; border-radius: 8px; text-align: center;">
+            <div style="color: #9333ea; font-weight: 600; margin-bottom: 5px;">${userNames.user1}</div>
+            <div style="font-size: 22px; font-weight: 700;">${todaysTotals.user1}</div>
+          </div>
+          
+          <!-- User 2 -->
+          <div style="padding: 12px; background-color: #eff6ff; border-radius: 8px; text-align: center;">
+            <div style="color: #3b82f6; font-weight: 600; margin-bottom: 5px;">${userNames.user2}</div>
+            <div style="font-size: 22px; font-weight: 700;">${todaysTotals.user2}</div>
+          </div>
         </div>
-        <div style="padding: 15px; background-color: #eff6ff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-align: center;">
-          <div style="color: #3b82f6; font-weight: 600; font-size: 16px; margin-bottom: 5px;">${userNames.user2}</div>
-          <div style="font-size: 24px; font-weight: 700;">${todaysTotals.user2}</div>
-          <div style="color: #6b7280; font-size: 14px;">questions completed</div>
-        </div>
-      </div>
-      `
-    );
-    
-    const leaderSection = this.formatSection(
-      'Today\'s Leader',
-      `
-      <div style="background-color: #f8fafc; border-radius: 8px; padding: 15px; text-align: center;">
-        <div style="font-size: 18px; font-weight: 600; color: ${leader === userNames.user1 ? '#9333ea' : '#3b82f6'};">
-          ${leader}
-        </div>
-        <div style="margin-top: 5px; color: #374151;">
+        
+        <!-- Lead status -->
+        <div style="margin-top: 15px; text-align: center; padding: 10px; background-color: #f8fafc; border-radius: 6px;">
+          <span style="color: ${leader === userNames.user1 ? '#9333ea' : '#3b82f6'}; font-weight: 600;">${leader}</span> 
           is leading by <span style="font-weight: 600;">${difference}</span> questions
         </div>
         
+        <!-- Progress bars -->
         <div style="margin-top: 15px;">
           <!-- User 1 Progress -->
-          <div style="margin-bottom: 12px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+          <div style="margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
               <div style="font-size: 14px; font-weight: 500; color: #9333ea;">${userNames.user1}</div>
-              <div style="font-size: 14px; font-weight: 500; color: #6b7280;">${todaysTotals.user1} questions</div>
+              <div style="font-size: 14px; color: #6b7280;">${todaysTotals.user1}</div>
             </div>
             <div style="height: 8px; background-color: #e5e7eb; border-radius: 4px; overflow: hidden;">
               <div style="height: 100%; width: ${Math.min(100, Math.round((todaysTotals.user1 / Math.max(todaysTotals.user1, todaysTotals.user2)) * 100))}%; 
@@ -200,9 +181,9 @@ export class EmailNotificationService {
           
           <!-- User 2 Progress -->
           <div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
               <div style="font-size: 14px; font-weight: 500; color: #3b82f6;">${userNames.user2}</div>
-              <div style="font-size: 14px; font-weight: 500; color: #6b7280;">${todaysTotals.user2} questions</div>
+              <div style="font-size: 14px; color: #6b7280;">${todaysTotals.user2}</div>
             </div>
             <div style="height: 8px; background-color: #e5e7eb; border-radius: 4px; overflow: hidden;">
               <div style="height: 100%; width: ${Math.min(100, Math.round((todaysTotals.user2 / Math.max(todaysTotals.user1, todaysTotals.user2)) * 100))}%; 
@@ -211,39 +192,43 @@ export class EmailNotificationService {
           </div>
         </div>
       </div>
-      `
-    );
+    `;
+    
+    // Random motivational quote generator
+    const quotes = [
+      "Success is the sum of small efforts repeated day in and day out.",
+      "The only way to learn is to practice.",
+      "The expert in anything was once a beginner.",
+      "Consistency is the key to achieving results.",
+      "Small daily improvements add up to big results."
+    ];
+    
+    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+    
+    const motivationSection = `
+      <div style="background-color: #faf5ff; border-radius: 8px; padding: 15px; text-align: center;">
+        <p style="color: #6d28d9; font-style: italic; margin: 0; font-size: 16px;">
+          "${randomQuote}"
+        </p>
+      </div>
+    `;
     
     return `
-      <!-- Username for header -->
-      <div id="header_username" style="display: none;">${headerName}</div>
-      
       ${activitySummary}
       ${progressSection}
-      ${leaderSection}
+      ${motivationSection}
     `;
   }
   
   async sendEmail(message: string): Promise<void> {
     let successCount = 0;
     
-    // Format the current date for the email
-    const formattedDate = new Date().toLocaleString('en-IN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-    
     for (const recipientEmail of this.RECIPIENT_EMAILS) {
       try {
         await this.rateLimitedSend({
           to_email: recipientEmail,
           message_html: message,
-          subject: `Study Activity Update`,
-          formatDate: formattedDate
+          subject: `Qbank Activity Update`,
         });
         
         successCount++;
