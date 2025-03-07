@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  Crosshair, Award, Check, AlertCircle, ChevronDown, ChevronUp
-} from 'lucide-react';
+import {Check, AlertCircle} from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '../lib/supabase';
 import StatsComparison from './functionality/StatsComparision';
 import DualUserProgress from './functionality/EnhancedProgress';
-import  ActivityLogs from './functionality/ActivityLogs';
+import ActivityLogs from './functionality/ActivityLogs';
+import ActivityHeatmap from './functionality/Heatmap';
 import { Toaster } from 'sonner';
 
 // Type definitions
@@ -446,6 +444,16 @@ const QBankTracker: React.FC = () => {
     />
   );
 
+  const heatmapComponent = (
+    <ActivityHeatmap
+      dailyProgress={dailyProgress}
+      userNames={{
+        user1: state.stats.user1.name,
+        user2: state.stats.user2.name
+      }}
+    />
+  );
+
   return (
     <>
       <Toaster 
@@ -460,6 +468,7 @@ const QBankTracker: React.FC = () => {
         <div className="w-full">{progressComponent}</div>
         <div className="w-full">{statsComparisonComponent}</div>
         <div className="w-full">{activityLogsComponent}</div>
+        <div className="w-full">{heatmapComponent}</div>
       </div>
 
       {/* Desktop layout */}
@@ -469,6 +478,7 @@ const QBankTracker: React.FC = () => {
           {statsComparisonComponent}
           {activityLogsComponent}
         </div>
+        <div className="w-full">{heatmapComponent}</div>
       </div>
     </>
   );
