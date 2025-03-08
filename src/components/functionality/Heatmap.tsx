@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { format, parseISO, startOfWeek, addDays, isAfter} from 'date-fns';
+import { format, parseISO, startOfWeek, addDays, isAfter, startOfMonth, endOfMonth } from 'date-fns';
+import { CalendarDays } from 'lucide-react';
 
 interface HeatmapProps {
   dailyProgress: Array<{
@@ -18,83 +19,103 @@ interface HeatmapProps {
 }
 
 const ActivityHeatmap: React.FC<HeatmapProps> = ({ dailyProgress, userNames }) => {
-  const [activeUser, setActiveUser] = useState<'user1' | 'user2' | 'both'>('both');
-  
+  const [selectedUsers, setSelectedUsers] = useState<('user1' | 'user2')[]>(['user1', 'user2']);
+
+  const toggleUserSelection = (user: 'user1' | 'user2') => {
+    setSelectedUsers(prev => 
+      prev.includes(user) 
+        ? prev.filter(u => u !== user)
+        : [...prev, user]
+    );
+  };
+
   // Generate the grid from first activity to today
   const dateData = useMemo(() => {
     if (!dailyProgress.length) {
       return { grid: [] };
     }
-    
+  
     // Find the first activity date
     const sortedDates = [...dailyProgress]
       .filter(day => day.user1Completed > 0 || day.user2Completed > 0)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
-    // Default to Jan 1 if no activity found
+  
     const firstActivityDate = sortedDates.length > 0 
       ? parseISO(sortedDates[0].date) 
       : new Date(2025, 0, 1);
-    
-    // Current date as the end date
+  
     const today = new Date();
-    
-    // Start from the beginning of the week that contains the first activity
     const firstDayOfCalendar = startOfWeek(firstActivityDate);
-    
-    // Calculate how many weeks we need
     const totalDays = Math.ceil((today.getTime() - firstDayOfCalendar.getTime()) / (1000 * 60 * 60 * 24));
     const totalWeeks = Math.ceil(totalDays / 7);
-    
-    // Create the grid
+  
     const grid: Array<Array<{date: Date, formattedDate: string, hasActivity: boolean}>> = [];
-    
-    // Initialize the grid with empty arrays for each day of the week (0-6)
+  
     for (let i = 0; i < 7; i++) {
       grid[i] = [];
     }
-    
-    // Fill the grid with dates from first activity to today
-    for (let i = 0; i <= totalWeeks; i++) {
-      for (let j = 0; j < 7; j++) {
-        const date = addDays(firstDayOfCalendar, i * 7 + j);
-        
-        // Only include days up to today
-        if (isAfter(date, today)) continue;
-        
+  
+    let currentDate = firstDayOfCalendar;
+    while (currentDate <= today) {
+      const weekStart = startOfWeek(currentDate);
+      const weekEnd = addDays(weekStart, 6);
+      
+      // Check if this week spans two months
+      for (let i = 0; i < 7; i++) {
+        const date = addDays(weekStart, i);
+        if (date > today) continue;
+
         const formattedDate = format(date, 'yyyy-MM-dd');
-        
-        // Check if this date has any activity
         const dayData = dailyProgress.find(d => d.date === formattedDate);
         const hasActivity = dayData ? (dayData.user1Completed > 0 || dayData.user2Completed > 0) : false;
         
-        grid[j].push({
+        // If this is the first day of a month and it's not Sunday,
+        // add empty cells for the previous month
+        if (date.getDate() === 1 && i > 0) {
+          // Clear the current week up to this point
+          for (let j = 0; j < i; j++) {
+            grid[j].pop();
+          }
+          // Add empty cells for the remainder of the previous month
+          for (let j = 0; j < i; j++) {
+            const emptyDate = addDays(date, -i + j);
+            grid[j].push({
+              date: emptyDate,
+              formattedDate: format(emptyDate, 'yyyy-MM-dd'),
+              hasActivity: false
+            });
+          }
+        }
+
+        grid[i].push({
           date,
           formattedDate,
           hasActivity
         });
       }
+
+      currentDate = addDays(weekEnd, 1);
     }
-    
+  
     return { grid };
   }, [dailyProgress]);
-
+  
   // Find max value for color intensity scaling
   const maxValue = useMemo(() => {
     if (!dailyProgress.length) return 10;
     
     let max = 0;
     dailyProgress.forEach(day => {
-      if (activeUser === 'user1' || activeUser === 'both') {
+      if (selectedUsers.includes('user1')) {
         max = Math.max(max, day.user1Completed);
       }
-      if (activeUser === 'user2' || activeUser === 'both') {
+      if (selectedUsers.includes('user2')) {
         max = Math.max(max, day.user2Completed);
       }
     });
     
     return max || 10; // Default to 10 if no data
-  }, [dailyProgress, activeUser]);
+  }, [dailyProgress, selectedUsers]);
 
   // Get intensity color with the new colors
   const getColorIntensity = (value: number, userType: 'user1' | 'user2') => {
@@ -140,49 +161,15 @@ const ActivityHeatmap: React.FC<HeatmapProps> = ({ dailyProgress, userNames }) =
     const dayData = dailyProgress.find(d => d.date === date);
     if (!dayData) return `${tooltipText}: No activity`;
     
-    if (activeUser === 'user1' || activeUser === 'both') {
+    if (selectedUsers.includes('user1')) {
       tooltipText += `\n${userNames.user1}: ${dayData.user1Completed} questions`;
     }
     
-    if (activeUser === 'user2' || activeUser === 'both') {
+    if (selectedUsers.includes('user2')) {
       tooltipText += `\n${userNames.user2}: ${dayData.user2Completed} questions`;
     }
     
     return tooltipText;
-  };
-
-  // Generate legend for the heatmap
-  const renderLegend = () => {
-    const legendColors = [0, 1, 2, 3, 4]; // 5 intensity levels
-    
-    return (
-      <div className="flex items-center text-xs gap-1 mt-4">
-        <span className="mr-1">Less</span>
-        {legendColors.map((level) => {
-          const color1 = getColorIntensity(level * (maxValue/4), 'user1');
-          const color2 = getColorIntensity(level * (maxValue/4), 'user2');
-          
-          let colorToUse;
-          if (activeUser === 'user1') {
-            colorToUse = color1;
-          } else if (activeUser === 'user2') {
-            colorToUse = color2;
-          } else {
-            // For "both" mode, show a split cell
-            colorToUse = `linear-gradient(90deg, ${color1} 50%, ${color2} 50%)`;
-          }
-          
-          return (
-            <div 
-              key={level}
-              className="w-3 h-3 rounded-sm"
-              style={{ background: colorToUse }}
-            />
-          );
-        })}
-        <span className="ml-1">More</span>
-      </div>
-    );
   };
 
   // Only render days that have activity
@@ -215,11 +202,18 @@ const ActivityHeatmap: React.FC<HeatmapProps> = ({ dailyProgress, userNames }) =
     return weeks;
   }, [dateData]);
 
+  // Add this helper function before the return statement
+  const isLastWeekOfMonth = (date: Date) => {
+    const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    const daysDifference = Math.ceil((lastDayOfMonth.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    return daysDifference < 7;
+  };
+
   if (weekColumns.length === 0) {
     return (
       <Card className="w-full">
         <CardHeader>
-          <CardTitle className="text-xl">Activity Heatmap</CardTitle>
+          <CardTitle className="text-xl">Heatmap</CardTitle>
         </CardHeader>
         <CardContent>
           <p>No activity data available</p>
@@ -229,70 +223,98 @@ const ActivityHeatmap: React.FC<HeatmapProps> = ({ dailyProgress, userNames }) =
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-xl">Activity Heatmap</CardTitle>
-          <div className="flex gap-2">
-            <Button 
-              size="sm" 
-              variant={activeUser === 'both' ? "default" : "outline"}
-              onClick={() => setActiveUser('both')}
-              className="px-3 py-1 h-8"
-            >
-              Both
-            </Button>
-            <Button 
-              size="sm" 
-              variant={activeUser === 'user1' ? "default" : "outline"}
-              onClick={() => setActiveUser('user1')}
-              className="px-3 py-1 h-8"
-              style={{ backgroundColor: activeUser === 'user1' ? '#7242eb' : '' }}
-            >
-              {userNames.user1}
-            </Button>
-            <Button 
-              size="sm" 
-              variant={activeUser === 'user2' ? "default" : "outline"}
-              onClick={() => setActiveUser('user2')}
-              className="px-3 py-1 h-8"
-              style={{ backgroundColor: activeUser === 'user2' ? '#2563eb' : '' }}
-            >
-              {userNames.user2}
-            </Button>
-          </div>
-        </div>
+    <Card className="w-full shadow-lg rounded-lg overflow-hidden bg-gradient-to-br from-white/80 via-white/90 to-white/80 dark:from-slate-900/80 dark:via-slate-900/90 dark:to-slate-900/80 backdrop-blur-sm border border-white/20 dark:border-slate-800/20">
+      <CardHeader className="border-b p-4 relative z-10 bg-gradient-to-r from-purple-600/15 to-blue-600/15 dark:from-purple-900/20 dark:to-blue-900/20 backdrop-blur-sm">
+        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+          <CalendarDays className="w-5 h-5 text-amber-500" />
+          <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent font-bold">
+            Activity Heatmap
+          </span>
+        </CardTitle>
       </CardHeader>
       <CardContent>
+      <div className="flex justify-center gap-2 mt-2 mb-4">
+          {(['user1', 'user2'] as const).map((userType) => (
+        <Button
+          key={userType}
+          variant={selectedUsers.includes(userType) ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => toggleUserSelection(userType)}
+          className={`
+            ${selectedUsers.includes(userType)
+          ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700'
+          : 'text-foreground hover:bg-accent'}
+            ${!selectedUsers.includes(userType) && 'opacity-50'}
+            transition-all duration-300
+          `}
+        >
+          {userNames[userType]}
+        </Button>
+          ))}
+        </div>
         <div className="overflow-x-auto">
           <div className="min-w-[750px]">
-            {/* The grid without month and day indicators */}
+            {/* Month labels */}
+            <div className="flex ml-6">
+              {weekColumns.map((week, weekIndex) => {
+                const date = week[0]?.date;
+                const isFirstDayOfMonth = date && date.getDate() <= 7;
+                const shouldShowMonth = weekIndex === 0 || isFirstDayOfMonth;
+                
+                return (
+                  <div 
+                    key={weekIndex} 
+                    className={`text-xs text-muted-foreground ${
+                      isLastWeekOfMonth(week[0].date) ? 'mr-2' : 'mr-1'
+                    }`}
+                    style={{ width: shouldShowMonth ? '30px' : '12px' }}
+                  >
+                    {shouldShowMonth && format(date, 'MMM')}
+                  </div>
+                );
+              })}
+            </div>
+            
             <div className="flex">
+              {/* Day labels */}
+              <div className="flex flex-col mr-2 text-xs text-muted-foreground">
+                <div className="h-3 mb-1">Sun</div>
+                <div className="h-3 mb-1">Mon</div>
+                <div className="h-3 mb-1">Tue</div>
+                <div className="h-3 mb-1">Wed</div>
+                <div className="h-3 mb-1">Thu</div>
+                <div className="h-3 mb-1">Fri</div>
+                <div className="h-3 mb-1">Sat</div>
+              </div>
+              
+              {/* Grid */}
               <div className="flex">
                 {weekColumns.map((week, weekIndex) => (
-                  <div key={weekIndex} className="mr-1">
+                  <div 
+                    key={weekIndex} 
+                    className={`${
+                      isLastWeekOfMonth(week[0].date) ? 'mr-2' : 'mr-1'
+                    }`}
+                  >
                     {week.map((dayData, dayIndex) => {
                       let user1Activity = getDayActivity(dayData.formattedDate, 'user1');
                       let user2Activity = getDayActivity(dayData.formattedDate, 'user2');
                       
                       let color;
-                      if (activeUser === 'user1') {
+                      if (selectedUsers.length === 1) {
+                        const userType = selectedUsers[0];
+                        const activity = userType === 'user1' ? user1Activity : user2Activity;
+                        color = getColorIntensity(activity, userType);
+                      } else if (selectedUsers.length === 2 && user1Activity > 0 && user2Activity > 0) {
+                        color = `linear-gradient(90deg, 
+                          ${getColorIntensity(user1Activity, 'user1')} 50%, 
+                          ${getColorIntensity(user2Activity, 'user2')} 50%)`;
+                      } else if (selectedUsers.includes('user1') && user1Activity > 0) {
                         color = getColorIntensity(user1Activity, 'user1');
-                      } else if (activeUser === 'user2') {
+                      } else if (selectedUsers.includes('user2') && user2Activity > 0) {
                         color = getColorIntensity(user2Activity, 'user2');
-                      } else if (activeUser === 'both') {
-                        if (user1Activity > 0 && user2Activity > 0) {
-                          // Split cell for both users
-                          color = `linear-gradient(90deg, 
-                                    ${getColorIntensity(user1Activity, 'user1')} 50%, 
-                                    ${getColorIntensity(user2Activity, 'user2')} 50%)`;
-                        } else if (user1Activity > 0) {
-                          color = getColorIntensity(user1Activity, 'user1');
-                        } else if (user2Activity > 0) {
-                          color = getColorIntensity(user2Activity, 'user2');
-                        } else {
-                          color = '#ebedf0'; // Empty cell
-                        }
+                      } else {
+                        color = '#ebedf0';
                       }
                       
                       return (
@@ -308,8 +330,6 @@ const ActivityHeatmap: React.FC<HeatmapProps> = ({ dailyProgress, userNames }) =
                 ))}
               </div>
             </div>
-            
-            {renderLegend()}
           </div>
         </div>
       </CardContent>
