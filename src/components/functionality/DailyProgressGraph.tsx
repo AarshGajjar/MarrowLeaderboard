@@ -128,39 +128,56 @@ const DailyProgressGraph: React.FC<ProgressDashboardProps> = ({
       .filter(day => day.completed > 0);
   }, [filteredData, selectedUser]);
 
-  const trendData = useMemo(() => {
-    const today = new Date(getDate()).toISOString().split('T')[0];
-    const windowSize = 7;
+const trendData = useMemo(() => {
+  const windowSize = 7;
+  
+  // First, sort the data by date to ensure chronological order
+  const sortedData = [...filteredData].sort((a, b) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
 
-    return filteredData
-      .map(data => {
-        const stats = calculateGoalProgress(data);
-        return {
-          date: data.date,
-          completed: stats.completed,
-          accuracy: stats.accuracy
-        };
-      })
-      .filter(day => day.completed > 0)
-      .map((data, index, activeArray) => {
-        const window = activeArray
-          .slice(Math.max(0, index - windowSize + 1), index + 1);
-        
-        const avgCompleted = window.length > 0
-          ? window.reduce((sum, d) => sum + d.completed, 0) / window.length
-          : 0;
-        
-        const avgAccuracy = window.length > 0
-          ? window.reduce((sum, d) => sum + d.accuracy, 0) / window.length
-          : 0;
+  // Initialize cumulative total
+  let cumulativeTotal = 0;
 
-        return {
-          date: data.date,
-          avgCompleted: Math.round(avgCompleted * 10) / 10,
-          avgAccuracy: Math.round(avgAccuracy * 10) / 10
-        };
-      });
-  }, [filteredData, selectedUser]);
+  return sortedData
+    .map(data => {
+      const userData = selectedUser === 'user1' ? data.user1Data : data.user2Data;
+      if (!userData) return null;
+      
+      // Add to cumulative total
+      cumulativeTotal += (userData.completed || 0);
+      
+      return {
+        date: data.date,
+        completed: userData.completed || 0,
+        accuracy: userData.completed > 0 
+          ? Math.round((userData.correct / userData.completed) * 100)
+          : 0,
+        cumulativeTotal: cumulativeTotal // Store the running total
+      };
+    })
+    .filter((day): day is NonNullable<typeof day> => day !== null)
+    .filter(day => day.completed > 0)
+    .map((data, index, activeArray) => {
+      const window = activeArray
+        .slice(Math.max(0, index - windowSize + 1), index + 1);
+      
+      const avgCompleted = window.length > 0
+        ? window.reduce((sum, d) => sum + d.completed, 0) / window.length
+        : 0;
+      
+      const avgAccuracy = window.length > 0
+        ? window.reduce((sum, d) => sum + d.accuracy, 0) / window.length
+        : 0;
+
+      return {
+        date: data.date,
+        avgCompleted: Math.round(avgCompleted * 10) / 10,
+        avgAccuracy: Math.round(avgAccuracy * 10) / 10,
+        totalQuestions: data.cumulativeTotal // Use the cumulative total instead
+      };
+    });
+}, [filteredData, selectedUser]);
 
   return (
     <div className="w-full">
@@ -300,10 +317,21 @@ const DailyProgressGraph: React.FC<ProgressDashboardProps> = ({
                         domain={[0, 100]}
                         tick={{ fontSize: 12, fill: "var(--text-color)" }}
                       />
+                      <YAxis 
+                        yAxisId="total"
+                        orientation="right"
+                        label={{ value: 'Total Questions', angle: 90, position: 'insideRight', offset: 70, fill: "var(--text-color)" }}
+                        domain={[0, 'auto']}
+                        tick={{ fontSize: 12, fill: "var(--text-color)" }}
+                        hide={true}
+                      />
                       <Tooltip 
                         formatter={(value, name) => {
                           if (name === "7-day Avg. Accuracy") {
                             return [`${value}%`, name];
+                          }
+                          if (name === "Total Completed") {
+                            return [`${value} questions`, name];
                           }
                           return [value, name];
                         }}
@@ -330,6 +358,14 @@ const DailyProgressGraph: React.FC<ProgressDashboardProps> = ({
                         dataKey="avgAccuracy"
                         stroke="#7c3aed"
                         name="7-day Avg. Accuracy"
+                      />
+                      <Line
+                        yAxisId="total"
+                        type="monotone"
+                        dataKey="totalQuestions"
+                        stroke="#f97316"
+                        strokeWidth={2}
+                        name="Total Completed"
                       />
                     </LineChart>
                   </ResponsiveContainer>
