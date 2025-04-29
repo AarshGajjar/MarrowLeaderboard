@@ -685,22 +685,56 @@ const ActivityLogs: React.FC<ActivityLogProps> = ({ logs, userNames, onRefresh }
             ))}
           </div>
 
-          {(['user1', 'user2'] as const).map((userType) => (
-            <div 
-              key={userType} 
-              className={`text-sm font-medium flex items-center justify-between p-2 rounded ${
-                userType === 'user1' 
-                  ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' 
-                  : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-              } ${!selectedUsers.includes(userType) && 'opacity-50'}`}
-            >
-              <span>{userNames[userType]}</span>
-              <div>
-                {dailyTotals[userType].completed} completed, {dailyTotals[userType].correct} correct 
-                {" ("}{calculateAccuracy(dailyTotals[userType].correct, dailyTotals[userType].completed)}%)
+          {(['user1', 'user2'] as const).map((userType) => {
+            const sessions = filteredLogs.filter(log => log.user_type === userType).length;
+            const accuracy = calculateAccuracy(dailyTotals[userType].correct, dailyTotals[userType].completed);
+            const isUser1 = userType === 'user1';
+            
+            return (
+              <div
+                key={userType}
+                className={`rounded-lg mb-4 ${!selectedUsers.includes(userType) && 'opacity-50'}`}
+              >
+                <div className={`flex items-center justify-between p-3 rounded-t-lg ${
+                  isUser1 
+                    ? 'bg-purple-500 text-white' 
+                    : 'bg-blue-500 text-white'
+                }`}>
+                  <span className="font-medium">{userNames[userType]}</span>
+                  <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded-full">
+                    {sessions} sessions
+                  </span>
+                </div>
+                
+                <div className={`p-4 rounded-b-lg ${
+                  isUser1
+                    ? 'bg-purple-50 dark:bg-purple-900/10' 
+                    : 'bg-blue-50 dark:bg-blue-900/10'
+                }`}>
+                  <div className="flex items-center">
+                    <div className={`text-2xl font-bold mr-2 ${
+                      isUser1 ? 'text-purple-700 dark:text-purple-400' : 'text-blue-700 dark:text-blue-400'
+                    }`}>
+                      {accuracy}%
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Accuracy</div>
+                    
+                    <div className="ml-auto flex gap-6">
+                      <div>
+                        <div className="text-right font-medium">{dailyTotals[userType].completed}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Completed</div>
+                      </div>
+                      
+                      <div>
+                        <div className="text-right font-medium">{dailyTotals[userType].correct}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Correct</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {activeTab === 'clock' && (
             <div className="p-4 flex justify-center">
