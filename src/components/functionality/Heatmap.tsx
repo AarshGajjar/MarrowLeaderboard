@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { format, parseISO, startOfWeek, addDays, isAfter, startOfMonth, endOfMonth } from 'date-fns';
 import { CalendarDays } from 'lucide-react';
+import { calculateConsistencyAndStreak } from '@/utils/dataPreprocessing';
 
 interface HeatmapProps {
   dailyProgress: Array<{
@@ -202,12 +203,19 @@ const ActivityHeatmap: React.FC<HeatmapProps> = ({ dailyProgress, userNames }) =
     return weeks;
   }, [dateData]);
 
-  // Add this helper function before the return statement
-  const isLastWeekOfMonth = (date: Date) => {
-    const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-    const daysDifference = Math.ceil((lastDayOfMonth.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    return daysDifference < 7;
-  };
+  // Replace the streak calculation with the utility function
+  const { currentStreak, longestStreak } = useMemo(() => {
+    const userData = dailyProgress.map(day => ({
+      date: day.date,
+      completed: selectedUsers.reduce((sum, user) => 
+        sum + day[`${user}Completed` as 'user1Completed' | 'user2Completed'], 0),
+      correct: selectedUsers.reduce((sum, user) => 
+        sum + day[`${user}Correct` as 'user1Correct' | 'user2Correct'], 0)
+    }));
+
+    const { streak, longestStreak } = calculateConsistencyAndStreak(userData);
+    return { currentStreak: streak, longestStreak };
+  }, [dailyProgress, selectedUsers]);
 
   if (weekColumns.length === 0) {
     return (
@@ -233,7 +241,7 @@ const ActivityHeatmap: React.FC<HeatmapProps> = ({ dailyProgress, userNames }) =
         </CardTitle>
       </CardHeader>
       <CardContent>
-      <div className="flex justify-center gap-2 mt-2 mb-4">
+        <div className="flex justify-center gap-2 mt-2 mb-4">
           {(['user1', 'user2'] as const).map((userType) => (
         <Button
           key={userType}
@@ -254,27 +262,6 @@ const ActivityHeatmap: React.FC<HeatmapProps> = ({ dailyProgress, userNames }) =
         </div>
         <div className="overflow-x-auto">
           <div className="min-w-[750px]">
-            {/* Month labels */}
-            <div className="flex ml-6">
-              {weekColumns.map((week, weekIndex) => {
-                const date = week[0]?.date;
-                const isFirstDayOfMonth = date && date.getDate() <= 7;
-                const shouldShowMonth = weekIndex === 0 || isFirstDayOfMonth;
-                
-                return (
-                  <div 
-                    key={weekIndex} 
-                    className={`text-xs text-muted-foreground ${
-                      isLastWeekOfMonth(week[0].date) ? 'mr-2' : 'mr-1'
-                    }`}
-                    style={{ width: shouldShowMonth ? '30px' : '12px' }}
-                  >
-                    {shouldShowMonth && format(date, 'MMM')}
-                  </div>
-                );
-              })}
-            </div>
-            
             <div className="flex">
               {/* Day labels */}
               <div className="flex flex-col mr-2 text-xs text-muted-foreground">
@@ -288,14 +275,9 @@ const ActivityHeatmap: React.FC<HeatmapProps> = ({ dailyProgress, userNames }) =
               </div>
               
               {/* Grid */}
-              <div className="flex">
+              <div className="flex gap-1">
                 {weekColumns.map((week, weekIndex) => (
-                  <div 
-                    key={weekIndex} 
-                    className={`${
-                      isLastWeekOfMonth(week[0].date) ? 'mr-2' : 'mr-1'
-                    }`}
-                  >
+                  <div key={weekIndex}>
                     {week.map((dayData, dayIndex) => {
                       let user1Activity = getDayActivity(dayData.formattedDate, 'user1');
                       let user2Activity = getDayActivity(dayData.formattedDate, 'user2');
@@ -328,6 +310,18 @@ const ActivityHeatmap: React.FC<HeatmapProps> = ({ dailyProgress, userNames }) =
                     })}
                   </div>
                 ))}
+              </div>
+            </div>
+            
+            {/* Streak Information */}
+            <div className="flex gap-4 mt-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <span>Current Streak:</span>
+                <span className="font-semibold text-foreground">{currentStreak} days</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>Longest Streak:</span>
+                <span className="font-semibold text-foreground">{longestStreak} days</span>
               </div>
             </div>
           </div>
