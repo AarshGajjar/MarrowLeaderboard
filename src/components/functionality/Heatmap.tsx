@@ -122,28 +122,60 @@ const ActivityHeatmap: React.FC<HeatmapProps> = ({ dailyProgress, userNames }) =
   const getColorIntensity = (value: number, userType: 'user1' | 'user2') => {
     if (value === 0) return '#ebedf0'; // Empty cell color
     
-    // Use logarithmic scale with 5 levels
+    // Use linear scale with 20 levels
     const normalizedValue = Math.min(
-      Math.floor((Math.log(value + 1) / Math.log(maxValue + 1)) * 4),
-      4
+      Math.floor((value / maxValue) * 19),
+      19
     );
     
-    // Purple for user1: #7242eb with 5 gradients
+    // Purple for user1: #7242eb with 20 gradients
     const user1Colors = [
       '#ebedf0',
-      '#e2d7f5', // Light purple
-      '#b095eb', // Medium purple
-      '#8862e4', // Dark purple
-      '#7242eb'  // Full purple
+      '#f7f5fc', // Lightest purple
+      '#f0ebfa',
+      '#e9e2f8',
+      '#e2d8f6',
+      '#dbcff4',
+      '#d4c5f2',
+      '#cdbbf0',
+      '#c6b2ee',
+      '#bfa8ec',
+      '#b89fea',
+      '#b195e8',
+      '#aa8ce6',
+      '#a382e4',
+      '#9c79e2',
+      '#956fe0',
+      '#8e66de',
+      '#875cdc',
+      '#8053da',
+      '#794ad8',
+      '#7242eb'  // Darkest purple
     ];
     
-    // Blue for user2: #2563eb with 5 gradients
+    // Blue for user2: #2563eb with 20 gradients
     const user2Colors = [
       '#ebedf0',
-      '#d1defa', // Light blue
-      '#8eaeef', // Medium blue
-      '#5f85ed', // Dark blue
-      '#2563eb'  // Full blue
+      '#f0f4fc', // Lightest blue
+      '#e6edfb',
+      '#dce6fa',
+      '#d2dff9',
+      '#c8d8f8',
+      '#bed1f7',
+      '#b4caf6',
+      '#aac3f5',
+      '#a0bcf4',
+      '#96b5f3',
+      '#8caef2',
+      '#82a7f1',
+      '#78a0f0',
+      '#6e99ef',
+      '#6492ee',
+      '#5a8bed',
+      '#5084ec',
+      '#467deb',
+      '#3c76ea',
+      '#2563eb'  // Darkest blue
     ];
     
     return userType === 'user1' ? user1Colors[normalizedValue] : user2Colors[normalizedValue];
