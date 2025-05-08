@@ -131,21 +131,27 @@ const DailyProgressGraph: React.FC<ProgressDashboardProps> = ({
 const trendData = useMemo(() => {
   const windowSize = 7;
   
-  // First, sort the data by date to ensure chronological order
-  const sortedData = [...filteredData].sort((a, b) => 
-    new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
+  // Get filtered data first
+  const filteredSortedData = getFilteredDataByRange([...dailyData])
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  // Calculate cumulative total from filtered data
+  let runningTotal = 0;
+  const cumulativeTotals = new Map<string, number>();
+  
+  filteredSortedData.forEach(data => {
+    const userData = selectedUser === 'user1' ? data.user1Data : data.user2Data;
+    if (userData) {
+      runningTotal += (userData.completed || 0);
+      cumulativeTotals.set(data.date, runningTotal);
+    }
+  });
 
-  // Initialize cumulative total
-  let cumulativeTotal = 0;
-
-  return sortedData
+  // Process data for the chart
+  return filteredSortedData
     .map(data => {
       const userData = selectedUser === 'user1' ? data.user1Data : data.user2Data;
       if (!userData) return null;
-      
-      // Add to cumulative total
-      cumulativeTotal += (userData.completed || 0);
       
       return {
         date: data.date,
@@ -153,7 +159,7 @@ const trendData = useMemo(() => {
         accuracy: userData.completed > 0 
           ? Math.round((userData.correct / userData.completed) * 100)
           : 0,
-        cumulativeTotal: cumulativeTotal // Store the running total
+        cumulativeTotal: cumulativeTotals.get(data.date) || 0
       };
     })
     .filter((day): day is NonNullable<typeof day> => day !== null)
@@ -174,10 +180,10 @@ const trendData = useMemo(() => {
         date: data.date,
         avgCompleted: Math.round(avgCompleted * 10) / 10,
         avgAccuracy: Math.round(avgAccuracy * 10) / 10,
-        totalQuestions: data.cumulativeTotal // Use the cumulative total instead
+        totalQuestions: data.cumulativeTotal
       };
     });
-}, [filteredData, selectedUser]);
+}, [dailyData, selectedUser, dateRange]);
 
   return (
     <div className="w-full">

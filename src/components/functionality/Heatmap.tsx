@@ -122,25 +122,27 @@ const ActivityHeatmap: React.FC<HeatmapProps> = ({ dailyProgress, userNames }) =
   const getColorIntensity = (value: number, userType: 'user1' | 'user2') => {
     if (value === 0) return '#ebedf0'; // Empty cell color
     
-    // Scale the value between 0 and 4 (for 5 levels of intensity)
-    const normalizedValue = Math.min(Math.floor((value / maxValue) * 5), 4);
+    // Use logarithmic scale with 5 levels
+    const normalizedValue = Math.min(
+      Math.floor((Math.log(value + 1) / Math.log(maxValue + 1)) * 4),
+      4
+    );
     
-    // Custom color schemes based on provided colors
-    // Purple for user1: #7242eb with varying opacity
+    // Purple for user1: #7242eb with 5 gradients
     const user1Colors = [
       '#ebedf0',
-      '#cdbcf0', // Lighter purple
-      '#a48ce6', // Light purple
-      '#8865ed', // Medium purple
+      '#e2d7f5', // Light purple
+      '#b095eb', // Medium purple
+      '#8862e4', // Dark purple
       '#7242eb'  // Full purple
     ];
     
-    // Blue for user2: #2563eb with varying opacity
+    // Blue for user2: #2563eb with 5 gradients
     const user2Colors = [
       '#ebedf0',
-      '#a6c1f4', // Lighter blue
-      '#7799ee', // Light blue
-      '#4b7bef', // Medium blue
+      '#d1defa', // Light blue
+      '#8eaeef', // Medium blue
+      '#5f85ed', // Dark blue
       '#2563eb'  // Full blue
     ];
     
